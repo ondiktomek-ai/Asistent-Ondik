@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchStatus, type ServerStatus } from './api';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
 import { VACANT_ID } from './world/layout';
 import { World } from './components/World';
@@ -15,6 +16,20 @@ export default function App() {
   const time = useClock();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lightMode, setLightMode] = useState<LightMode>('auto');
+  const [status, setStatus] = useState<ServerStatus | null>(null);
+  const [busy, setBusy] = useState<Set<string>>(() => new Set());
+  const refreshStatus = useCallback(() => {
+    void fetchStatus().then(setStatus);
+  }, []);
+  useEffect(refreshStatus, [refreshStatus]);
+  const setAgentBusy = useCallback((agentId: string, isBusy: boolean) => {
+    setBusy((prev) => {
+      const next = new Set(prev);
+      if (isBusy) next.add(agentId);
+      else next.delete(agentId);
+      return next;
+    });
+  }, []);
   const selected = selectedId ? (AGENT_BY_ID[selectedId] ?? null) : null;
 
   useEffect(() => {
@@ -62,9 +77,16 @@ export default function App() {
 
       <main className="stage">
         <div className="world-wrap">
-          <World time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} />
+          <World time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={busy} />
         </div>
-        <AgentPanel agent={selected} vacant={selectedId === VACANT_ID} onClose={() => setSelectedId(null)} />
+        <AgentPanel
+          agent={selected}
+          vacant={selectedId === VACANT_ID}
+          status={status}
+          onClose={() => setSelectedId(null)}
+          onStatusChange={refreshStatus}
+          onBusyChange={setAgentBusy}
+        />
       </main>
     </div>
   );

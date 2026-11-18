@@ -1,5 +1,7 @@
 import type { AgentDef, AgentStatus } from '../world/types';
 import { Robot } from './Robot';
+import { Chat } from './Chat';
+import type { ServerStatus } from '../api';
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
   setup: 'Čeká na nastavení',
@@ -8,8 +10,49 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
   offline: 'Mimo provoz',
 };
 
-export function AgentPanel({ agent, vacant = false, onClose }: { agent: AgentDef | null; vacant?: boolean; onClose: () => void }) {
+interface AgentPanelProps {
+  agent: AgentDef | null;
+  vacant?: boolean;
+  status: ServerStatus | null;
+  onClose: () => void;
+  onStatusChange: () => void;
+  onBusyChange: (agentId: string, busy: boolean) => void;
+}
+
+export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange }: AgentPanelProps) {
   const open = !!agent || vacant;
+  const connected = !!agent && !!status?.connectedAgents.includes(agent.id);
+  const chatCapable = !!agent && (connected || agent.id === 'ondik');
+  const details = agent && (
+    <>
+          <p className="panel-desc">{agent.description}</p>
+
+          <section>
+            <h3>Náplň práce</h3>
+            <ul className="duties">
+              {agent.duties.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <h3>Nástroje</h3>
+            <ul className="tools">
+              {agent.tools.map((t) => (
+                <li key={t.name}>
+                  <div>
+                    <strong>{t.name}</strong>
+                    <span>{t.description}</span>
+                  </div>
+                  <span className={`badge badge-${t.status}`}>{t.status === 'connected' ? 'Připojeno' : 'Plánováno'}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+    </>
+  );
+  const agentStatus: AgentStatus | undefined = agent ? (connected && status?.ready ? 'idle' : agent.status) : undefined;
   return (
     <aside className={`panel${open ? ' open' : ''}`} aria-hidden={!open}>
       {vacant && !agent && (
@@ -47,44 +90,33 @@ export function AgentPanel({ agent, vacant = false, onClose }: { agent: AgentDef
               </div>
               <h2>{agent.name}</h2>
               <div className="panel-role">{agent.role}</div>
-              <span className={`status status-${agent.status}`}>{STATUS_LABEL[agent.status]}</span>
+              <span className={`status status-${agentStatus}`}>{STATUS_LABEL[agentStatus!]}</span>
             </div>
           </header>
 
-          <p className="panel-desc">{agent.description}</p>
-
-          <section>
-            <h3>Náplň práce</h3>
-            <ul className="duties">
-              {agent.duties.map((d) => (
-                <li key={d}>{d}</li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h3>Nástroje</h3>
-            <ul className="tools">
-              {agent.tools.map((t) => (
-                <li key={t.name}>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <span>{t.description}</span>
-                  </div>
-                  <span className={`badge badge-${t.status}`}>{t.status === 'connected' ? 'Připojeno' : 'Plánováno'}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h3>Zadat úkol</h3>
-            <div className="chat-placeholder">
-              <input disabled placeholder="Napiš zprávu…" />
-              <button disabled>Odeslat</button>
-            </div>
-            <p className="hint">Komunikace s agenty přijde v další fázi – nejdřív je nastavíme.</p>
-          </section>
+          {chatCapable ? (
+            <>
+              <section className="chat-section">
+                <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />
+              </section>
+              <details className="about">
+                <summary>O agentovi</summary>
+                {details}
+              </details>
+            </>
+          ) : (
+            <>
+              {details}
+              <section>
+                <h3>Zadat úkol</h3>
+                <div className="chat-placeholder">
+                  <input disabled placeholder="Napiš zprávu…" />
+                  <button disabled>Odeslat</button>
+                </div>
+                <p className="hint">{agent.name} zatím není připojený. Až ho nastavíme, půjde mu psát přímo tady.</p>
+              </section>
+            </>
+          )}
         </div>
       )}
     </aside>

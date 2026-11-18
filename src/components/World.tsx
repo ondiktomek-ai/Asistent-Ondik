@@ -14,11 +14,12 @@ interface WorldProps {
   lightMode: LightMode;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  busy: Set<string>;
 }
 
 const DOOR_FLOOR = '#424859';
 
-export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
+export function World({ time, lightMode, selectedId, onSelect, busy }: WorldProps) {
   const plans = useMemo<RobotPlan[]>(() => {
     const roomPlans = ROOMS.flatMap((room) => {
       const agent = room.agentId ? AGENT_BY_ID[room.agentId] : null;
@@ -159,7 +160,7 @@ export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
             y={r.y}
             facing={r.facing}
             walking={r.walking}
-            bubble={r.bubble}
+            bubble={busy.has(r.id) ? '💭 Přemýšlím…' : r.bubble}
             color={agent.color}
             icon={agent.icon}
             name={agent.name}
