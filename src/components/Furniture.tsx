@@ -370,28 +370,6 @@ export function BarChart({ cx, cy, w, h, color }: { cx: number; cy: number; w: n
   );
 }
 
-export function Kanban({ cx, cy, w, h, seed = 5 }: { cx: number; cy: number; w: number; h: number; seed?: number }) {
-  const rnd = seeded(seed);
-  const cols = ['#ffd84d', '#7fd1ff', '#8ef0a5'];
-  const cw = (w - 8) / 3;
-  return (
-    <Board cx={cx} cy={cy} w={w} h={h}>
-      {[0, 1, 2].map((c) => (
-        <g key={c}>
-          {c > 0 && <line x1={cx - w / 2 + 4 + c * cw} x2={cx - w / 2 + 4 + c * cw} y1={cy - h / 2 + 4} y2={cy + h / 2 - 4} stroke="#c3c9d6" />}
-          {Array.from({ length: 3 + Math.floor(rnd() * 3) - c }, (_, k) => {
-            const nx = cx - w / 2 + 8 + c * cw + (k % 3) * ((cw - 8) / 3);
-            const ny = cy - h / 2 + 7 + Math.floor(k / 3) * 16 + (k % 2) * 3;
-            return (
-              <rect key={k} x={nx} y={ny} width={(cw - 8) / 3 - 2} height={12} rx={1} fill={cols[c]} transform={`rotate(${(rnd() - 0.5) * 10} ${nx + 6} ${ny + 6})`} />
-            );
-          })}
-        </g>
-      ))}
-    </Board>
-  );
-}
-
 export function Globe({ cx, cy }: { cx: number; cy: number }) {
   return (
     <g>
@@ -490,20 +468,6 @@ export function SmallTable({ cx, cy, w = 50, h = 34 }: { cx: number; cy: number;
     <g>
       <Shadow x={cx - w / 2} y={cy - h / 2} w={w} h={h} rx={5} />
       <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={5} fill={WOOD} stroke={WOOD_DARK} strokeWidth={2} />
-    </g>
-  );
-}
-
-export function StickyNotes({ cx, cy, seed = 9 }: { cx: number; cy: number; seed?: number }) {
-  const rnd = seeded(seed);
-  const cols = ['#ffd84d', '#7fd1ff', '#8ef0a5', '#ffb3c7'];
-  return (
-    <g>
-      {Array.from({ length: 6 }, (_, i) => {
-        const x = cx - 22 + (i % 3) * 15 + rnd() * 3;
-        const y = cy - 12 + Math.floor(i / 3) * 14 + rnd() * 3;
-        return <rect key={i} x={x} y={y} width={12} height={12} rx={1} fill={cols[i % cols.length]} transform={`rotate(${(rnd() - 0.5) * 30} ${x + 6} ${y + 6})`} />;
-      })}
     </g>
   );
 }

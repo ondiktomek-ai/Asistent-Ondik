@@ -8,9 +8,30 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
   offline: 'Mimo provoz',
 };
 
-export function AgentPanel({ agent, onClose }: { agent: AgentDef | null; onClose: () => void }) {
+export function AgentPanel({ agent, vacant = false, onClose }: { agent: AgentDef | null; vacant?: boolean; onClose: () => void }) {
+  const open = !!agent || vacant;
   return (
-    <aside className={`panel${agent ? ' open' : ''}`} aria-hidden={!agent}>
+    <aside className={`panel${open ? ' open' : ''}`} aria-hidden={!open}>
+      {vacant && !agent && (
+        <div className="panel-inner" style={{ ['--accent' as string]: '#8f9bb5' }}>
+          <button className="panel-close" onClick={onClose} aria-label="Zavřít">
+            ×
+          </button>
+          <header className="panel-head">
+            <div className="vacant-icon">＋</div>
+            <div>
+              <div className="panel-room">Přízemí</div>
+              <h2>Volná kancelář</h2>
+              <div className="panel-role">Připraveno pro nového agenta</div>
+            </div>
+          </header>
+          <p className="panel-desc">
+            Zatím tu jsou jen krabice od stěhování. Až budeš potřebovat dalšího pomocníka (třeba na úkoly, cestování nebo nákupy), nastěhujeme ho
+            sem.
+          </p>
+          <p className="hint">Stačí říct, co má nový agent dělat a s jakými nástroji pracovat.</p>
+        </div>
+      )}
       {agent && (
         <div className="panel-inner" style={{ ['--accent' as string]: agent.color }}>
           <button className="panel-close" onClick={onClose} aria-label="Zavřít">

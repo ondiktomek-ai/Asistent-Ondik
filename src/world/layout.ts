@@ -12,7 +12,8 @@ export const HALLWAY: Rect = { x: 40, y: 310, w: 1120, h: 200 };
 export type DoorSide = 'top' | 'bottom';
 
 export interface RoomLayout extends Rect {
-  agentId: string;
+  /** `null` = volná kancelář připravená pro nového agenta. */
+  agentId: string | null;
   /** Na které straně kanceláře jsou dveře do chodby. */
   door: DoorSide;
 }
@@ -31,11 +32,18 @@ export const ROOMS: RoomLayout[] = [
   { agentId: 'chronos', ...COLS[1], y: TOP_Y, h: ROOM_H, door: 'bottom' },
   { agentId: 'lexa', ...COLS[2], y: TOP_Y, h: ROOM_H, door: 'bottom' },
   { agentId: 'kasa', ...COLS[0], y: BOTTOM_Y, h: ROOM_H, door: 'top' },
-  { agentId: 'tasko', ...COLS[1], y: BOTTOM_Y, h: ROOM_H, door: 'top' },
+  { agentId: null, ...COLS[1], y: BOTTOM_Y, h: ROOM_H, door: 'top' },
   { agentId: 'bit', ...COLS[2], y: BOTTOM_Y, h: ROOM_H, door: 'top' },
 ];
 
 export const DOOR_WIDTH = 60;
+
+export const VACANT_ID = 'vacant';
+
+/** Unikátní klíč místnosti (i pro volné kanceláře). */
+export function roomKey(room: RoomLayout): string {
+  return room.agentId ?? `${VACANT_ID}-${room.x}-${room.y}`;
+}
 
 /** Střed dveří (na rozhraní kancelář / chodba). */
 export function doorCenter(room: RoomLayout): Point {

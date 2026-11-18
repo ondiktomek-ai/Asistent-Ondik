@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { AGENT_BY_ID } from '../world/agents';
-import { BUILDING, DOOR_WIDTH, HALLWAY, RECEPTION_SPOTS, ROOMS, WORLD, doorCenter } from '../world/layout';
+import { BUILDING, DOOR_WIDTH, HALLWAY, RECEPTION_SPOTS, ROOMS, VACANT_ID, WORLD, doorCenter, roomKey } from '../world/layout';
 import { useRobots, type RobotPlan } from '../hooks/useRobots';
 import { darknessFor, type LightMode } from '../hooks/useClock';
 import { THEMES } from './themes';
-import { Room, roomCtx } from './Room';
+import { Room, VacantRoom, roomCtx } from './Room';
 import { Hallway } from './Hallway';
 import { Robot } from './Robot';
 import { seeded } from './Furniture';
@@ -20,8 +20,9 @@ const DOOR_FLOOR = '#424859';
 
 export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
   const plans = useMemo<RobotPlan[]>(() => {
-    const roomPlans = ROOMS.map((room) => {
-      const agent = AGENT_BY_ID[room.agentId];
+    const roomPlans = ROOMS.flatMap((room) => {
+      const agent = room.agentId ? AGENT_BY_ID[room.agentId] : null;
+      if (!agent) return [];
       const theme = THEMES[agent.theme as keyof typeof THEMES];
       const ctx = roomCtx(room, agent, new Date());
       return {
@@ -66,17 +67,21 @@ export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
 
       <Hallway selected={selectedId === 'ondik'} onSelect={onSelect} />
 
-      {ROOMS.map((room) => (
-        <Room key={room.agentId} room={room} agent={AGENT_BY_ID[room.agentId]} time={time} selected={selectedId === room.agentId} onSelect={onSelect} />
-      ))}
+      {ROOMS.map((room) =>
+        room.agentId ? (
+          <Room key={roomKey(room)} room={room} agent={AGENT_BY_ID[room.agentId]} time={time} selected={selectedId === room.agentId} onSelect={onSelect} />
+        ) : (
+          <VacantRoom key={roomKey(room)} room={room} selected={selectedId === VACANT_ID} onSelect={onSelect} />
+        ),
+      )}
 
       {/* Dveře */}
       {ROOMS.map((room) => {
         const d = doorCenter(room);
         return (
-          <g key={`door-${room.agentId}`} style={{ pointerEvents: 'none' }}>
+          <g key={`door-${roomKey(room)}`} style={{ pointerEvents: 'none' }}>
             <rect x={d.x - DOOR_WIDTH / 2} y={d.y - 5} width={DOOR_WIDTH} height={10} fill={DOOR_FLOOR} />
-            <rect x={d.x - DOOR_WIDTH / 2} y={d.y - 1.5} width={DOOR_WIDTH} height={3} fill={AGENT_BY_ID[room.agentId].color} opacity={0.7} />
+            <rect x={d.x - DOOR_WIDTH / 2} y={d.y - 1.5} width={DOOR_WIDTH} height={3} fill={room.agentId ? AGENT_BY_ID[room.agentId].color : '#5a6278'} opacity={0.7} />
           </g>
         );
       })}
@@ -84,16 +89,17 @@ export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
       {/* Okna ve vnějších zdech */}
       {ROOMS.map((room) => {
         const wy = room.door === 'bottom' ? BUILDING.y + 2 : BUILDING.y + BUILDING.h - 8;
+        const lit = night && room.agentId !== null;
         return [0.2, 0.5, 0.8].map((f) => (
           <rect
-            key={`win-${room.agentId}-${f}`}
+            key={`win-${roomKey(room)}-${f}`}
             x={room.x + room.w * f - 34}
             y={wy}
             width={68}
             height={6}
             rx={2}
-            fill={night ? '#ffd77a' : '#9fd8ff'}
-            opacity={night ? 0.85 : 0.9}
+            fill={lit ? '#ffd77a' : night ? '#2a3558' : '#9fd8ff'}
+            opacity={0.9}
             className="window"
           />
         ));
@@ -101,22 +107,23 @@ export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
 
       {/* Cedulky kanceláří na chodbě */}
       {ROOMS.map((room) => {
-        const agent = AGENT_BY_ID[room.agentId];
+        const agent = room.agentId ? AGENT_BY_ID[room.agentId] : null;
         const d = doorCenter(room);
-        const label = `${agent.icon} ${agent.roomName}`;
+        const label = agent ? `${agent.icon} ${agent.roomName}` : '＋ Volno';
+        const color = agent ? agent.color : '#5a6278';
         const lw = label.length * 7 + 22;
         const ly = room.door === 'bottom' ? HALLWAY.y + 8 : HALLWAY.y + HALLWAY.h - 28;
         return (
           <g
-            key={`sign-${room.agentId}`}
+            key={`sign-${roomKey(room)}`}
             className="room-sign"
             transform={`translate(${d.x + DOOR_WIDTH / 2 + 8}, ${ly})`}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect(agent.id);
+              onSelect(agent ? agent.id : VACANT_ID);
             }}
           >
-            <rect width={lw} height={20} rx={5} fill="#141925" stroke={agent.color} strokeWidth={1.5} />
+            <rect width={lw} height={20} rx={5} fill="#141925" stroke={color} strokeWidth={1.5} />
             <text x={lw / 2} y={14} textAnchor="middle" fontSize={11} fontWeight={600} fill="#fff">
               {label}
             </text>
@@ -128,9 +135,9 @@ export function World({ time, lightMode, selectedId, onSelect }: WorldProps) {
       <g style={{ pointerEvents: 'none' }}>
         <rect x={0} y={0} width={WORLD.width} height={WORLD.height} fill="#0a1030" opacity={darkness * 0.42} className="night-overlay" />
         {darkness > 0 &&
-          ROOMS.map((room) => (
+          ROOMS.filter((room) => room.agentId).map((room) => (
             <ellipse
-              key={`light-${room.agentId}`}
+              key={`light-${roomKey(room)}`}
               cx={room.x + room.w / 2}
               cy={room.y + room.h / 2}
               rx={room.w * 0.55}

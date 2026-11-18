@@ -10,7 +10,6 @@ import {
   Desk,
   FloorLamp,
   Globe,
-  Kanban,
   MailBag,
   Pigeonholes,
   Plant,
@@ -19,7 +18,6 @@ import {
   Safe,
   ServerRack,
   SmallTable,
-  StickyNotes,
   WallCalendar,
   WallClock,
   Workbench,
@@ -137,27 +135,6 @@ export const THEMES: Record<Exclude<ThemeId, 'reception'>, ThemeDef> = {
       { x: 245, y: b(70) },
       { x: 320, y: b(85) },
       { x: 280, y: b(190) },
-    ],
-  },
-  tasks: {
-    floor: { kind: 'planks', a: '#4d2f3a', b: '#563442' },
-    render: ({ w, b, back, accent }) => (
-      <>
-        <Kanban cx={150} cy={b(36)} w={230} h={56} />
-        <Desk cx={300} cy={b(130)} w={80} h={44} back={back} chair={false} screen="#ffc2cf" />
-        <Rug cx={110} cy={b(160)} w={140} h={90} color={accent} />
-        <SmallTable cx={110} cy={b(160)} w={90} h={50} />
-        <StickyNotes cx={110} cy={b(160)} />
-        <Plant cx={w - 24} cy={b(24)} r={12} />
-        <Plant cx={26} cy={b(232)} />
-      </>
-    ),
-    spots: ({ b }) => [
-      { x: 80, y: b(85) },
-      { x: 220, y: b(85) },
-      { x: 300, y: b(170) },
-      { x: 110, y: b(205) },
-      { x: 190, y: b(160) },
     ],
   },
   workshop: {

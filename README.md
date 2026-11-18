@@ -17,19 +17,19 @@ npm run build    # produkční build do dist/
 | Kancelář   | Agent   | Role                                           |
 |------------|---------|------------------------------------------------|
 | ⭐ Recepce  | Ondik   | Hlavní asistent – přijímá požadavky a deleguje |
-| ✉️ Pošta    | Pošťák  | E-maily                                        |
-| 📅 Kalendář | Chronos | Kalendář a schůzky                             |
+| ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   |
+| 📅 Kalendář | Chronos | Google Kalendář                                |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    |
-| ✅ Plánovna | Tasko   | Úkoly a projekty                               |
 | 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      |
+| ＋ Volno    | –       | Volná kancelář pro budoucího agenta            |
 
 ## Struktura
 
 ```
 src/
   world/agents.ts      ← definice agentů (jména, role, nástroje, hlášky) – tady se agenti nastavují
-  world/layout.ts      ← půdorys budovy: kanceláře, chodba, dveře
+  world/layout.ts      ← půdorys budovy: kanceláře, chodba, dveře (agentId: null = volná kancelář)
   components/themes.tsx    ← vybavení jednotlivých kanceláří + místa, kam robot chodí
   components/Furniture.tsx ← knihovna nábytku (SVG)
   components/Robot.tsx     ← robot (animace, bubliny)

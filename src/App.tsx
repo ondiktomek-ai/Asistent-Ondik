@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
+import { VACANT_ID } from './world/layout';
 import { World } from './components/World';
 import { AgentPanel } from './components/AgentPanel';
 import { useClock, type LightMode } from './hooks/useClock';
@@ -14,7 +15,7 @@ export default function App() {
   const time = useClock();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lightMode, setLightMode] = useState<LightMode>('auto');
-  const selected = selectedId ? AGENT_BY_ID[selectedId] : null;
+  const selected = selectedId ? (AGENT_BY_ID[selectedId] ?? null) : null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -63,7 +64,7 @@ export default function App() {
         <div className="world-wrap">
           <World time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
-        <AgentPanel agent={selected} onClose={() => setSelectedId(null)} />
+        <AgentPanel agent={selected} vacant={selectedId === VACANT_ID} onClose={() => setSelectedId(null)} />
       </main>
     </div>
   );
