@@ -1,8 +1,12 @@
-# 🏢 Kancelář Ondik
+# 🏙️ Městečko Ondik
 
-Osobní AI asistent jako kancelářská budova plná robotů-agentů. Každý agent má vlastní
-kancelář vybavenou podle toho, co dělá. Hlavní asistent **Ondik** sedí na recepci, povídá si
-s tebou přes Claude a postupně bude předávat práci ostatním.
+Osobní AI asistent jako 3D městečko robotů-agentů. Každý agent má vlastní **box**, ve kterém
+bydlí (postel, noční stolek) i pracuje (pracoviště podle zaměření). Boxy stojí v kruhu kolem
+**radnice**, sídla CEO Ondřeje Tomka – tam později vyroste **Jarvis**, hlasový asistent, který
+umí zavolat. Hlavní asistent **Ondik** sedí v boxu Recepce a povídá si s tebou přes Claude.
+
+Ovládání: tažením otáčíš, kolečkem (na telefonu dvěma prsty) přibližuješ, kliknutím na box
+nebo radnici se kamera přiblíží a otevře detail. V noci jdou roboti k posteli.
 
 ## Zprovoznění na počítači
 
@@ -47,15 +51,16 @@ npm run dev          # kancelář s hot-reloadem na http://localhost:5173
 
 ## Tým
 
-| Kancelář    | Agent   | Role                                           | Stav |
+| Box         | Agent   | Role                                           | Stav |
 |-------------|---------|------------------------------------------------|------|
+| 🏛️ Radnice  | Jarvis  | Hlasový asistent CEO, telefonní hovory         | plánováno |
 | ⭐ Recepce  | Ondik   | Hlavní asistent – přijímá požadavky a deleguje | ✅ chat přes Claude |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář                                | plánováno |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
 | 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      | plánováno |
-| ＋ Volno    | –       | Volná kancelář pro budoucího agenta            |      |
+| ＋ Volný box | –      | Místo pro budoucího agenta                     |      |
 
 ## Struktura
 
@@ -66,10 +71,14 @@ server/
   store.ts       ← ukládání konverzací do data/
 src/
   world/agents.ts          ← definice agentů (jména, role, nástroje, hlášky)
-  world/layout.ts          ← půdorys budovy (agentId: null = volná kancelář)
-  components/themes.tsx    ← vybavení kanceláří + místa, kam robot chodí
+  world/layout.ts          ← pořadí boxů v kruhu (null = volný box), rozměry
+  world3d/World3D.tsx      ← 3D scéna: náměstí, světla den/noc, kamera
+  world3d/OfficeBox.tsx    ← box agenta (zdi se snižují, když zakrývají výhled)
+  world3d/TownHall.tsx     ← radnice s podstavcem pro Jarvise
+  world3d/themes.tsx       ← vybavení boxů + místa, kam robot chodí
+  world3d/props.tsx        ← 3D nábytek
+  world3d/Robot3D.tsx      ← robot (chůze, bubliny)
   components/Chat.tsx      ← chat s agentem
-  components/World.tsx     ← skládá celý svět, den/noc
   api.ts                   ← klient serveru
 ```
 
@@ -78,7 +87,8 @@ API ji automaticky zkusí na záložním modelu (server-side fallback).
 
 ## Plán
 
-1. **Svět** ✅ – budova, kanceláře, roboti, den/noc, detail agenta
+1. **Svět** ✅ – 3D městečko: boxy agentů v kruhu, radnice, den/noc, detail agenta
 2. **Mozek** ✅ – server na počítači, chat s Ondikem přes Claude, přístup z telefonu
 3. **Nástroje** – Chronos (Google Kalendář), Pošťák (Gmail + Centrum.cz), …
-4. **Živá kancelář** – Ondik deleguje na kolegy, roboti ukazují, na čem pracují, ranní přehled
+4. **Živé městečko** – Ondik deleguje na kolegy, roboti ukazují, na čem pracují, ranní přehled
+5. **Jarvis** – hlasový asistent na radnici, který umí zavolat

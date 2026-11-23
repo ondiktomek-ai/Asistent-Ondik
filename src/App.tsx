@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchStatus, type ServerStatus } from './api';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
-import { VACANT_ID } from './world/layout';
-import { World } from './components/World';
+import { TOWN_HALL_ID, VACANT_ID } from './world/layout';
+import { World3D } from './world3d/World3D';
 import { AgentPanel } from './components/AgentPanel';
 import { useClock, type LightMode } from './hooks/useClock';
 
@@ -44,13 +44,20 @@ export default function App() {
     <div className="app">
       <header className="hud">
         <div className="brand">
-          <span className="logo">🏢</span>
+          <span className="logo">🏙️</span>
           <div>
-            <h1>Kancelář Ondik</h1>
+            <h1>Městečko Ondik</h1>
             <span className="subtitle">Tvůj tým AI agentů</span>
           </div>
         </div>
         <nav className="roster" aria-label="Agenti">
+          <button
+            className={`chip${selectedId === TOWN_HALL_ID ? ' active' : ''}`}
+            style={{ ['--accent' as string]: '#f5b83d' }}
+            onClick={() => setSelectedId(selectedId === TOWN_HALL_ID ? null : TOWN_HALL_ID)}
+          >
+            🏛️ Radnice
+          </button>
           {AGENTS.map((a) => (
             <button
               key={a.id}
@@ -77,11 +84,13 @@ export default function App() {
 
       <main className="stage">
         <div className="world-wrap">
-          <World time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={busy} />
+          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={busy} />
+          <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
         </div>
         <AgentPanel
           agent={selected}
           vacant={selectedId === VACANT_ID}
+          townHall={selectedId === TOWN_HALL_ID}
           status={status}
           onClose={() => setSelectedId(null)}
           onStatusChange={refreshStatus}
