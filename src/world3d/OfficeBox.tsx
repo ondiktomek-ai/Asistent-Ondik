@@ -56,25 +56,32 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
   const leftWall = useRef<Group>(null);
   const rightWall = useRef<Group>(null);
   const [cam] = useState(() => new Vector3());
+  const lowered = useRef({ back: false, left: false, right: false });
   useFrame(({ camera }, dt) => {
     if (!root.current) return;
     root.current.worldToLocal(cam.copy(camera.position));
-    const k = Math.min(1, dt * 6);
-    const set = (g: Group | null, low: boolean) => {
-      if (g) g.scale.y += ((low ? 0.12 : 1) - g.scale.y) * k;
+    const k = Math.min(1, dt * 4);
+    // hystereze: zeď se sníží až kus za hranou a zvedne až kus před ní, aby necukala
+    const M = 0.6;
+    const low = lowered.current;
+    low.back = low.back ? cam.z < -d / 2 + M : cam.z < -d / 2 - M;
+    low.left = low.left ? cam.x < -w / 2 + M : cam.x < -w / 2 - M;
+    low.right = low.right ? cam.x > w / 2 - M : cam.x > w / 2 + M;
+    const set = (g: Group | null, isLow: boolean) => {
+      if (g) g.scale.y += ((isLow ? 0.12 : 1) - g.scale.y) * k;
     };
-    set(backWall.current, cam.z < -d / 2);
-    set(leftWall.current, cam.x < -w / 2);
-    set(rightWall.current, cam.x > w / 2);
+    set(backWall.current, low.back);
+    set(leftWall.current, low.left);
+    set(rightWall.current, low.right);
   });
 
   return (
     <group ref={root} position={placement.position} rotation={[0, placement.rotationY, 0]} onClick={click} onPointerOver={over} onPointerOut={out}>
       {/* podlaha a základ */}
-      <B p={[0, -0.15, 0]} s={[w + 0.3, 0.3, d + 0.3]} c="#3a3f4f" />
-      <B p={[0, 0.0, 0]} s={[w, 0.02, d]} c={interior?.floor ?? '#5a5f70'} />
+      <B p={[0, -0.13, 0]} s={[w + 0.3, 0.3, d + 0.3]} c="#3a3f4f" />
+      <B p={[0, 0.02, 0]} s={[w, 0.04, d]} c={interior?.floor ?? '#5a5f70'} />
       {/* svítící práh – barva agenta */}
-      <B p={[0, 0.02, d / 2 + 0.05]} s={[w + 0.3, 0.05, 0.12]} c={accent} e={accent} ei={glow} />
+      <B p={[0, 0.05, d / 2 + 0.05]} s={[w + 0.3, 0.06, 0.12]} c={accent} e={accent} ei={glow} />
 
       {/* zdi: zadní a boční, předek je otevřený do středu */}
       <group ref={backWall}>
@@ -89,7 +96,7 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
           <B p={[sx * (w / 2 - 0.075), h / 2, 0]} s={[0.15, h, d]} c={wall} />
           <B p={[sx * (w / 2 - 0.075), h + 0.04, 0]} s={[0.19, 0.08, d]} c={accent} e={accent} ei={glow * 0.5} />
           {/* okno */}
-          <B p={[sx * (w / 2 - 0.075), 1.35, 0.7]} s={[0.17, 0.8, 1.3]} c={night ? '#ffd77a' : '#a8dcff'} e={night ? '#ffc65a' : '#000'} ei={night ? 1.1 : 0} />
+          <B p={[sx * (w / 2 - 0.075), 1.35, 0.7]} s={[0.21, 0.8, 1.3]} c={night ? '#ffd77a' : '#a8dcff'} e={night ? '#ffc65a' : '#000'} ei={night ? 1.1 : 0} />
         </group>
       ))}
 

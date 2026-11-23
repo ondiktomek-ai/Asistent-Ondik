@@ -87,7 +87,7 @@ export function TownHall({ selected, darkness, busy, onSelect }: { selected: boo
       <C p={[0, 0.23, 0]} r={TOWN_HALL_RADIUS - 0.35} h={0.15} c="#ddd6c6" seg={48} />
       <C p={[0, 0.375, 0]} r={TOWN_HALL_RADIUS - 0.7} h={0.15} c={STONE} seg={48} />
       {/* zlatý kruh na podlaze */}
-      <mesh position={[0, floorY + 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, floorY + 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[2.55, 2.7, 48]} />
         <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={selected ? 1.2 : hover ? 0.7 : 0.25} />
       </mesh>
@@ -119,7 +119,7 @@ export function TownHall({ selected, darkness, busy, onSelect }: { selected: boo
 
       {/* kancelář CEO – stůl čelem ke vchodu */}
       <group position={[0, floorY, 0]}>
-        <B p={[0, 0.01, -1.2]} s={[3.2, 0.02, 1.6]} c="#7a2f3a" />
+        <B p={[0, 0.02, -1.2]} s={[3.2, 0.04, 1.6]} c="#7a2f3a" />
         <Desk p={[0, 0, -1.0]} r={Math.PI} w={1.9} monitors={2} screen="#ffe39a" chair={false} />
         <Chair p={[0, 0, -1.65]} r={Math.PI} c="#7a2f3a" />
         <Plant p={[-1.8, 0, -1.8]} />

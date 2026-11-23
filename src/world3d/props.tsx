@@ -4,7 +4,7 @@
  */
 import { useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { Group, Mesh } from 'three';
+import { Color, type Group, type Mesh } from 'three';
 
 type V3 = [number, number, number];
 
@@ -64,7 +64,7 @@ export function Desk({ p, r = 0, w = 1.4, screen = '#7fd1ff', monitors = 1, chai
             <B p={[0, 0.05, 0]} s={[0.18, 0.02, 0.12]} c={DARK} />
             <B p={[0, 0.2, 0]} s={[0.04, 0.3, 0.04]} c={DARK} />
             <B p={[0, 0.38, 0]} s={[0.5, 0.3, 0.03]} c={DARK} />
-            <B p={[0, 0.38, 0.017]} s={[0.46, 0.26, 0.005]} c={screen} e={screen} ei={0.9} />
+            <B p={[0, 0.38, 0.024]} s={[0.46, 0.26, 0.006]} c={screen} e={screen} ei={0.9} />
           </G>
         );
       })}
@@ -121,9 +121,9 @@ export function Plant({ p, s = 1 }: { p: V3; s?: number }) {
 
 export function Rug({ p, w, d, color }: { p: V3; w: number; d: number; color: string }) {
   return (
-    <mesh position={[p[0], 0.012, p[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    <mesh position={[p[0], 0.065, p[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[w, d]} />
-      <meshStandardMaterial color={color} roughness={1} transparent opacity={0.55} />
+      <meshStandardMaterial color={'#' + new Color(color).multiplyScalar(0.75).getHexString()} roughness={1} polygonOffset polygonOffsetFactor={-2} />
     </mesh>
   );
 }
@@ -162,8 +162,8 @@ export function WallBoard({ p, w, h, children, frame = '#56607a' }: { p: V3; w: 
   return (
     <G p={p}>
       <B p={[0, 0, 0]} s={[w + 0.08, h + 0.08, 0.04]} c={frame} />
-      <B p={[0, 0, 0.022]} s={[w, h, 0.005]} c="#f4f6fb" />
-      <group position={[0, 0, 0.03]}>{children}</group>
+      <B p={[0, 0, 0.035]} s={[w, h, 0.01]} c="#f4f6fb" />
+      <group position={[0, 0, 0.05]}>{children}</group>
     </G>
   );
 }
@@ -172,12 +172,12 @@ export function CalendarBoard({ p, accent }: { p: V3; accent: string }) {
   const today = new Date().getDate() % 28;
   return (
     <WallBoard p={p} w={1.8} h={1.1}>
-      <B p={[0, 0.46, 0]} s={[1.8, 0.16, 0.005]} c={accent} />
+      <B p={[0, 0.46, 0]} s={[1.8, 0.16, 0.01]} c={accent} />
       {Array.from({ length: 28 }, (_, i) => {
         const c = i % 7;
         const r = Math.floor(i / 7);
         const col = i === today ? accent : [3, 9, 17, 22].includes(i) ? '#ffd9c2' : '#dfe4ee';
-        return <B key={i} p={[-0.78 + c * 0.26, 0.24 - r * 0.21, 0]} s={[0.22, 0.17, 0.005]} c={col} />;
+        return <B key={i} p={[-0.78 + c * 0.26, 0.24 - r * 0.21, 0]} s={[0.22, 0.17, 0.01]} c={col} />;
       })}
     </WallBoard>
   );
@@ -267,11 +267,11 @@ export function ServerRack({ p, r = 0, seed = 1 }: { p: V3; r?: number; seed?: n
     <G p={p} r={r}>
       <B p={[0, 0.95, 0]} s={[0.6, 1.9, 0.6]} c="#1b2130" />
       {Array.from({ length: 8 }, (_, i) => (
-        <B key={i} p={[0, 0.3 + i * 0.2, 0.301]} s={[0.5, 0.14, 0.01]} c="#2b3348" />
+        <B key={i} p={[0, 0.3 + i * 0.2, 0.31]} s={[0.5, 0.14, 0.02]} c="#2b3348" />
       ))}
       <group ref={leds}>
         {Array.from({ length: 16 }, (_, i) => (
-          <B key={i} p={[-0.18 + (i % 2) * 0.07, 0.3 + Math.floor(i / 2) * 0.2, 0.31]} s={[0.03, 0.03, 0.01]} c="#3dff8c" e={(i + seed) % 5 === 0 ? '#ffb03d' : '#3dff8c'} ei={2} />
+          <B key={i} p={[-0.18 + (i % 2) * 0.07, 0.3 + Math.floor(i / 2) * 0.2, 0.33]} s={[0.03, 0.03, 0.02]} c="#3dff8c" e={(i + seed) % 5 === 0 ? '#ffb03d' : '#3dff8c'} ei={2} />
         ))}
       </group>
     </G>
@@ -409,7 +409,7 @@ export function MovingBoxes({ p }: { p: V3 }) {
   return (
     <G p={p}>
       <B p={[0, 0.3, 0]} s={[0.7, 0.6, 0.6]} c="#b58b5c" />
-      <B p={[0, 0.3, 0.301]} s={[0.12, 0.6, 0.005]} c="#e8d3a8" />
+      <B p={[0, 0.3, 0.31]} s={[0.12, 0.6, 0.02]} c="#e8d3a8" />
       <B p={[0.75, 0.22, 0.1]} s={[0.55, 0.44, 0.5]} c="#a87d50" />
       <B p={[0.1, 0.78, 0.02]} s={[0.5, 0.36, 0.45]} c="#c29766" />
     </G>

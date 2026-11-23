@@ -32,7 +32,8 @@ export function World3D({ time, lightMode, selectedId, onSelect, busy }: World3D
       className="world3d"
       shadows
       dpr={[1, 2]}
-      camera={{ position: [0, initial.height, initial.dist], fov: 45, near: 0.5, far: 300 }}
+      gl={{ logarithmicDepthBuffer: true, antialias: true }}
+      camera={{ position: [0, initial.height, initial.dist], fov: 45, near: 0.8, far: 260 }}
       onPointerMissed={() => onSelect(null)}
     >
       <Scene time={time} darkness={darkness} night={night} selectedId={selectedId} onSelect={onSelect} busy={busy} />
@@ -75,7 +76,8 @@ function Scene({
         shadow-camera-right={22}
         shadow-camera-top={22}
         shadow-camera-bottom={-22}
-        shadow-bias={-0.0004}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.04}
       />
       <ambientLight intensity={0.15 + darkness * 0.1} color="#b8c6ff" />
 
@@ -134,7 +136,7 @@ function Ground({ night }: { night: boolean }) {
   const plazaR = RING_RADIUS + 4.3;
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
         <circleGeometry args={[140, 64]} />
         <meshStandardMaterial color={night ? '#27452f' : '#6fae62'} roughness={1} />
       </mesh>
@@ -143,7 +145,7 @@ function Ground({ night }: { night: boolean }) {
         <meshStandardMaterial color="#d6cfbf" roughness={0.95} />
       </mesh>
       {/* vnitřní okruh a paprskovité cesty k boxům */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
         <ringGeometry args={[TOWN_HALL_RADIUS + 0.3, TOWN_HALL_RADIUS + 1.3, 64]} />
         <meshStandardMaterial color="#bfb6a3" roughness={0.95} />
       </mesh>
@@ -151,7 +153,7 @@ function Ground({ night }: { night: boolean }) {
         const len = RING_RADIUS - 2.6 - TOWN_HALL_RADIUS;
         const mid = TOWN_HALL_RADIUS + len / 2;
         return (
-          <mesh key={pl.key} position={[Math.sin(pl.angle) * mid, 0.006, Math.cos(pl.angle) * mid]} rotation={[-Math.PI / 2, 0, pl.angle]} receiveShadow>
+          <mesh key={pl.key} position={[Math.sin(pl.angle) * mid, 0.06, Math.cos(pl.angle) * mid]} rotation={[-Math.PI / 2, 0, pl.angle]} receiveShadow>
             <planeGeometry args={[1.6, len]} />
             <meshStandardMaterial color="#bfb6a3" roughness={0.95} />
           </mesh>

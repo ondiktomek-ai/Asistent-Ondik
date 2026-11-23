@@ -115,9 +115,9 @@ export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1
 
   return (
     <group ref={root} scale={scale}>
-      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
         <circleGeometry args={[0.28, 20]} />
-        <meshBasicMaterial color="#000" transparent opacity={0.25} />
+        <meshBasicMaterial color="#000" transparent opacity={0.25} depthWrite={false} polygonOffset polygonOffsetFactor={-4} />
       </mesh>
       <mesh ref={legL} position={[-0.09, 0.2, 0]} castShadow>
         <boxGeometry args={[0.1, 0.22, 0.12]} />
