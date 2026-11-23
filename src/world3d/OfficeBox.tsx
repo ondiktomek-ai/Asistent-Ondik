@@ -3,7 +3,7 @@ import { Html } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Color, Vector3, type Group } from 'three';
 import type { AgentDef } from '../world/types';
-import { BOX, VACANT_ID, type BoxPlacement } from '../world/layout';
+import { BOX, placementId, type BoxPlacement } from '../world/layout';
 import { B, Bed, MovingBoxes, Nightstand, Plant } from './props';
 import { INTERIORS, NIGHT_SPOT } from './themes';
 import { Robot3D } from './Robot3D';
@@ -30,9 +30,9 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
   const ready = useSceneReady();
   const accent = agent?.color ?? '#8f9bb5';
   const wall = tint(accent, 0.62);
-  const interior = agent ? INTERIORS[agent.theme] : null;
+  const interior = agent && agent.theme !== 'townhall' ? INTERIORS[agent.theme] : null;
   const { w, d, h } = BOX;
-  const id = agent?.id ?? VACANT_ID;
+  const id = placementId(placement);
 
   const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -119,7 +119,12 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
 
       {ready && (
       <Html position={[0, h + 0.9, -d / 2]} center zIndexRange={[10, 0]}>
-        <button className={`box-label${selected ? ' active' : ''}`} style={{ ['--accent' as string]: accent }} onClick={() => onSelect(id)}>
+        <button className={`box-label${selected ? ' active' : ''}`} style={{ ['--accent' as string]: accent }} onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(id);
+          }}
+        >
           <span className="box-label-icon">{agent ? agent.icon : '＋'}</span>
           <span>
             <strong>{agent ? agent.name : 'Volný box'}</strong>

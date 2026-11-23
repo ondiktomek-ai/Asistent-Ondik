@@ -2,8 +2,9 @@
 
 Osobní AI asistent jako 3D městečko robotů-agentů. Každý agent má vlastní **box**, ve kterém
 bydlí (postel, noční stolek) i pracuje (pracoviště podle zaměření). Boxy stojí v kruhu kolem
-**radnice**, sídla CEO Ondřeje Tomka – tam později vyroste **Jarvis**, hlasový asistent, který
-umí zavolat. Hlavní asistent **Ondik** sedí v boxu Recepce a povídá si s tebou přes Claude.
+**radnice**, sídla CEO Ondřeje Tomka. Na radnici sedí i hlavní asistent **Ondik**, který si s tebou
+povídá přes Claude a časem se z něj stane **Jarvis** – asistent, se kterým budeš mluvit hlasem
+a který ti umí zavolat.
 
 Ovládání: tažením otáčíš, kolečkem (na telefonu dvěma prsty) přibližuješ, kliknutím na box
 nebo radnici se kamera přiblíží a otevře detail. V noci jdou roboti k posteli.
@@ -53,14 +54,13 @@ npm run dev          # kancelář s hot-reloadem na http://localhost:5173
 
 | Box         | Agent   | Role                                           | Stav |
 |-------------|---------|------------------------------------------------|------|
-| 🏛️ Radnice  | Jarvis  | Hlasový asistent CEO, telefonní hovory         | plánováno |
-| ⭐ Recepce  | Ondik   | Hlavní asistent – přijímá požadavky a deleguje | ✅ chat přes Claude |
+| 🏛️ Radnice  | Ondik   | Hlavní asistent, budoucí Jarvis (hlas, hovory) | ✅ chat přes Claude |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář                                | plánováno |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
 | 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      | plánováno |
-| ＋ Volný box | –      | Místo pro budoucího agenta                     |      |
+| ＋ 2× volný box | –   | Místo pro budoucí agenty                       |      |
 
 ## Struktura
 
@@ -91,4 +91,4 @@ API ji automaticky zkusí na záložním modelu (server-side fallback).
 2. **Mozek** ✅ – server na počítači, chat s Ondikem přes Claude, přístup z telefonu
 3. **Nástroje** – Chronos (Google Kalendář), Pošťák (Gmail + Centrum.cz), …
 4. **Živé městečko** – Ondik deleguje na kolegy, roboti ukazují, na čem pracují, ranní přehled
-5. **Jarvis** – hlasový asistent na radnici, který umí zavolat
+5. **Jarvis** – Ondik dostane hlas a umí zavolat

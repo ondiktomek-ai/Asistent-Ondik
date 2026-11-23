@@ -9,14 +9,14 @@ export const AGENTS: AgentDef[] = [
   {
     id: 'ondik',
     name: 'Ondik',
-    role: 'Hlavní asistent',
-    roomName: 'Recepce',
+    role: 'Hlavní asistent · budoucí Jarvis',
+    roomName: 'Radnice',
     icon: '⭐',
     color: '#f5b83d',
-    theme: 'reception',
+    theme: 'townhall',
     status: 'setup',
     description:
-      'Šéf recepce a tvůj hlavní kontakt. Přijímá požadavky, rozhoduje, který agent se jich ujme, a hlídá, aby se na nic nezapomnělo.',
+      'Tvůj hlavní asistent. Sídlí na radnici hned vedle tebe, přijímá požadavky, rozhoduje, který agent se jich ujme, a hlídá, aby se na nic nezapomnělo. Časem z něj bude Jarvis – asistent, se kterým budeš mluvit hlasem a který ti umí zavolat.',
     duties: [
       'Přijímá tvoje požadavky (chat, hlas, zprávy)',
       'Deleguje práci ostatním agentům',
@@ -27,8 +27,10 @@ export const AGENTS: AgentDef[] = [
       { name: 'Delegování', description: 'Předávání úkolů ostatním agentům', status: 'planned' },
       { name: 'Paměť', description: 'Dlouhodobá paměť o tobě a tvých zvyklostech', status: 'planned' },
       { name: 'Notifikace', description: 'Upozornění do telefonu', status: 'planned' },
+      { name: 'Hlas (Jarvis)', description: 'Mluvený rozhovor místo psaní', status: 'planned' },
+      { name: 'Telefonní hovory (Jarvis)', description: 'Zavolá ti, když je něco důležitého', status: 'planned' },
     ],
-    idleLines: ['Co dnes vyřešíme?', 'Všichni na místech!', 'Kontroluju kanceláře…', 'Kávu?'],
+    idleLines: ['Co dnes vyřešíme?', 'Všichni na místech!', 'Jarvis mód: brzy…', 'Kávu, šéfe?'],
   },
   {
     id: 'postak',

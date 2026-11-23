@@ -5,6 +5,8 @@ import { DoubleSide, type Group, type Mesh } from 'three';
 import { TOWN_HALL_ID, TOWN_HALL_RADIUS } from '../world/layout';
 import { B, C, Chair, Desk, Plant, S } from './props';
 import { useSceneReady } from './useSceneReady';
+import { Robot3D } from './Robot3D';
+import { AGENT_BY_ID } from '../world/agents';
 
 const STONE = '#e9e4d8';
 const GOLD = '#f5b83d';
@@ -17,18 +19,33 @@ export function TownHallLabel({ selected, onSelect }: { selected: boolean; onSel
   if (!ready) return null;
   return (
     <Html position={[0, 8.4, 0]} center zIndexRange={[10, 0]}>
-      <button className={`box-label townhall-label${selected ? ' active' : ''}`} style={{ ['--accent' as string]: GOLD }} onClick={() => onSelect(TOWN_HALL_ID)}>
+      <button className={`box-label townhall-label${selected ? ' active' : ''}`} style={{ ['--accent' as string]: GOLD }} onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(TOWN_HALL_ID);
+        }}
+      >
         <span className="box-label-icon">🏛️</span>
         <span>
           <strong>Radnice</strong>
-          <small>CEO Ondřej Tomek</small>
+          <small>CEO Ondřej Tomek · Ondik</small>
         </span>
       </button>
     </Html>
   );
 }
 
-export function TownHall({ selected, darkness, onSelect }: { selected: boolean; darkness: number; onSelect: (id: string) => void }) {
+/** Kam Ondik na radnici chodí: k CEO stolu, k podstavci Jarvise a mezi sloupy. */
+const ONDIK_SPOTS: [number, number, number][] = [
+  [0.9, 0, 0.1],
+  [-0.9, 0, 0.1],
+  [0.7, 0, 1.6],
+  [-1.7, 0, 1.2],
+  [1.8, 0, -0.4],
+];
+
+export function TownHall({ selected, darkness, busy, onSelect }: { selected: boolean; darkness: number; busy: boolean; onSelect: (id: string) => void }) {
+  const ondik = AGENT_BY_ID[TOWN_HALL_ID];
   const [hover, setHover] = useState(false);
   const holo = useRef<Mesh>(null);
   const ring = useRef<Group>(null);
@@ -107,6 +124,9 @@ export function TownHall({ selected, darkness, onSelect }: { selected: boolean; 
         <Chair p={[0, 0, -1.65]} r={Math.PI} c="#7a2f3a" />
         <Plant p={[-1.8, 0, -1.8]} />
         <Plant p={[1.8, 0, -1.8]} />
+
+        {/* Ondik – hlavní asistent, nespí */}
+        <Robot3D color={ondik.color} spots={ONDIK_SPOTS} nightSpot={ONDIK_SPOTS[0]} night={false} busy={busy} lines={ondik.idleLines} />
 
         {/* podstavec pro Jarvise */}
         <C p={[0, 0.15, 1.1]} r={[0.5, 0.6]} h={0.3} c="#1b2130" seg={32} />

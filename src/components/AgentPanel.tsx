@@ -13,15 +13,14 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
 interface AgentPanelProps {
   agent: AgentDef | null;
   vacant?: boolean;
-  townHall?: boolean;
   status: ServerStatus | null;
   onClose: () => void;
   onStatusChange: () => void;
   onBusyChange: (agentId: string, busy: boolean) => void;
 }
 
-export function AgentPanel({ agent, vacant = false, townHall = false, status, onClose, onStatusChange, onBusyChange }: AgentPanelProps) {
-  const open = !!agent || vacant || townHall;
+export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange }: AgentPanelProps) {
+  const open = !!agent || vacant;
   const connected = !!agent && !!status?.connectedAgents.includes(agent.id);
   const chatCapable = !!agent && (connected || agent.id === 'ondik');
   const details = agent && (
@@ -56,55 +55,6 @@ export function AgentPanel({ agent, vacant = false, townHall = false, status, on
   const agentStatus: AgentStatus | undefined = agent ? (connected && status?.ready ? 'idle' : agent.status) : undefined;
   return (
     <aside className={`panel${open ? ' open' : ''}`} aria-hidden={!open}>
-      {townHall && (
-        <div className="panel-inner" style={{ ['--accent' as string]: '#f5b83d' }}>
-          <button className="panel-close" onClick={onClose} aria-label="Zavřít">
-            ×
-          </button>
-          <header className="panel-head">
-            <div className="vacant-icon townhall-icon">🏛️</div>
-            <div>
-              <div className="panel-room">Radnice · střed městečka</div>
-              <h2>Ondřej Tomek</h2>
-              <div className="panel-role">CEO</div>
-            </div>
-          </header>
-          <p className="panel-desc">
-            Tady sídlíš ty. Kolem radnice stojí v kruhu boxy tvých agentů – každý v nich bydlí i pracuje a odsud jim zadáváš práci.
-          </p>
-          <section>
-            <h3>Jarvis</h3>
-            <div className="jarvis-card">
-              <div className="jarvis-orb" aria-hidden />
-              <div>
-                <strong>Připravuje se</strong>
-                <p>
-                  Na podstavci uprostřed radnice vyroste Jarvis – hlasový asistent, který ti umí zavolat, přečíst, co je nového, a vzít si od tebe úkol
-                  po telefonu.
-                </p>
-              </div>
-            </div>
-          </section>
-          <section>
-            <h3>Plánované schopnosti</h3>
-            <ul className="tools">
-              {[
-                ['Hlasový rozhovor', 'Mluvíš s Jarvisem jako s člověkem'],
-                ['Telefonní hovory', 'Jarvis ti zavolá, když je něco důležitého'],
-                ['Řízení týmu', 'Rozdělí práci mezi agenty v boxech'],
-              ].map(([n, d]) => (
-                <li key={n}>
-                  <div>
-                    <strong>{n}</strong>
-                    <span>{d}</span>
-                  </div>
-                  <span className="badge badge-planned">Plánováno</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      )}
       {vacant && !agent && (
         <div className="panel-inner" style={{ ['--accent' as string]: '#8f9bb5' }}>
           <button className="panel-close" onClick={onClose} aria-label="Zavřít">
@@ -149,6 +99,15 @@ export function AgentPanel({ agent, vacant = false, townHall = false, status, on
               <section className="chat-section">
                 <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />
               </section>
+              {agent.theme === 'townhall' && (
+                <div className="jarvis-card">
+                  <div className="jarvis-orb" aria-hidden />
+                  <div>
+                    <strong>Brzy Jarvis</strong>
+                    <p>Ondik se na radnici promění v Jarvise: budeš s ním mluvit hlasem a zavolá ti, když bude něco důležitého.</p>
+                  </div>
+                </div>
+              )}
               <details className="about">
                 <summary>O agentovi</summary>
                 {details}

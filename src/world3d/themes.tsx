@@ -2,12 +2,10 @@ import type { ReactNode } from 'react';
 import type { ThemeId } from '../world/types';
 import {
   Armchair,
-  B,
   BarChartBoard,
   Bookshelf,
   Cabinet,
   CalendarBoard,
-  CoffeeMachine,
   Coins,
   Desk,
   FloorLamp,
@@ -19,7 +17,6 @@ import {
   Rug,
   Safe,
   ServerRack,
-  Sofa,
   WallClock,
   Workbench,
 } from './props';
@@ -43,29 +40,7 @@ export interface Interior {
  * Vnitřek boxů. Levá zadní část (x < -1.6) je „byt“ – postel a noční stolek,
  * pravá část je pracoviště podle zaměření agenta.
  */
-export const INTERIORS: Record<ThemeId, Interior> = {
-  reception: {
-    floor: '#8a6a4a',
-    render: ({ accent }) => (
-      <>
-        <Rug p={[1.2, 0, 0.4]} w={2.6} d={2.2} color={accent} />
-        <B p={[1.2, 0.55, 0.3]} s={[2.2, 1.1, 0.5]} c="#c99a68" />
-        <B p={[1.2, 1.12, 0.3]} s={[2.3, 0.06, 0.6]} c={accent} />
-        <B p={[1.2, 1.32, 0.16]} s={[0.5, 0.32, 0.03]} c="#1d2433" />
-        <B p={[1.2, 1.32, 0.178]} s={[0.46, 0.28, 0.005]} c="#ffe39a" e="#ffe39a" ei={0.8} />
-        <Sofa p={[1.3, 0, -2.0]} color="#56658a" />
-        <CoffeeMachine p={[2.6, 0, -1.0]} />
-        <Plant p={[2.6, 0, 1.9]} />
-      </>
-    ),
-    spots: [
-      [1.2, 0, -0.4],
-      [1.2, 0, -0.4],
-      [0.1, 0, 1.6],
-      [2.2, 0, -1.2],
-      [-1.0, 0, 0.6],
-    ],
-  },
+export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
   mail: {
     floor: '#3b4f78',
     render: ({ accent }) => (

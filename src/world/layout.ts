@@ -4,10 +4,11 @@
  */
 
 export const VACANT_ID = 'vacant';
-export const TOWN_HALL_ID = 'radnice';
+/** Na radnici sídlí Ondik – hlavní asistent, budoucí Jarvis. Výběr radnice = výběr Ondika. */
+export const TOWN_HALL_ID = 'ondik';
 
 /** Pořadí boxů po kruhu. `null` = volný box pro budoucího agenta. */
-export const RING: (string | null)[] = ['ondik', 'postak', 'chronos', 'lexa', 'kasa', 'bit', null];
+export const RING: (string | null)[] = [null, 'postak', 'chronos', 'lexa', 'kasa', 'bit', null];
 
 export const RING_RADIUS = 11.5;
 export const BOX = { w: 6, d: 5, h: 2.4 };
@@ -20,6 +21,15 @@ export interface BoxPlacement {
   position: [number, number, number];
   /** Otočení kolem osy Y tak, aby otevřená strana boxu (+z) mířila do středu. */
   rotationY: number;
+}
+
+/** ID pro výběr boxu: agent, nebo klíč volného boxu (vacant-0, vacant-6, …). */
+export function placementId(p: BoxPlacement): string {
+  return p.agentId ?? p.key;
+}
+
+export function isVacantId(id: string | null): boolean {
+  return !!id && id.startsWith(`${VACANT_ID}-`);
 }
 
 export const PLACEMENTS: BoxPlacement[] = RING.map((agentId, i) => {

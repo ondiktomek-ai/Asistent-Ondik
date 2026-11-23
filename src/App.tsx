@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchStatus, type ServerStatus } from './api';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
-import { TOWN_HALL_ID, VACANT_ID } from './world/layout';
+import { isVacantId } from './world/layout';
 import { World3D } from './world3d/World3D';
 import { AgentPanel } from './components/AgentPanel';
 import { useClock, type LightMode } from './hooks/useClock';
@@ -51,13 +51,6 @@ export default function App() {
           </div>
         </div>
         <nav className="roster" aria-label="Agenti">
-          <button
-            className={`chip${selectedId === TOWN_HALL_ID ? ' active' : ''}`}
-            style={{ ['--accent' as string]: '#f5b83d' }}
-            onClick={() => setSelectedId(selectedId === TOWN_HALL_ID ? null : TOWN_HALL_ID)}
-          >
-            🏛️ Radnice
-          </button>
           {AGENTS.map((a) => (
             <button
               key={a.id}
@@ -89,8 +82,7 @@ export default function App() {
         </div>
         <AgentPanel
           agent={selected}
-          vacant={selectedId === VACANT_ID}
-          townHall={selectedId === TOWN_HALL_ID}
+          vacant={isVacantId(selectedId)}
           status={status}
           onClose={() => setSelectedId(null)}
           onStatusChange={refreshStatus}

@@ -4,7 +4,7 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import { Color, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { AGENT_BY_ID } from '../world/agents';
-import { PLACEMENTS, RING_RADIUS, TOWN_HALL_ID, TOWN_HALL_RADIUS, VACANT_ID } from '../world/layout';
+import { PLACEMENTS, RING_RADIUS, TOWN_HALL_ID, TOWN_HALL_RADIUS, placementId } from '../world/layout';
 import { darknessFor, type LightMode } from '../hooks/useClock';
 import { OfficeBox } from './OfficeBox';
 import { TownHall, TownHallLabel } from './TownHall';
@@ -81,18 +81,17 @@ function Scene({
 
       <Ground night={night} />
 
-      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} />
+      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} busy={busy.has(TOWN_HALL_ID)} />
       <TownHallLabel selected={selectedId === TOWN_HALL_ID} onSelect={select} />
 
       {PLACEMENTS.map((pl) => {
         const agent = pl.agentId ? AGENT_BY_ID[pl.agentId] : null;
-        const id = agent?.id ?? VACANT_ID;
         return (
           <OfficeBox
             key={pl.key}
             placement={pl}
             agent={agent}
-            selected={selectedId === id}
+            selected={selectedId === placementId(pl)}
             night={night}
             darkness={darkness}
             time={time}
@@ -223,7 +222,7 @@ function CameraRig({ selectedId }: { selectedId: string | null }) {
       const dir = new Vector3(camera.position.x, 0, camera.position.z).normalize();
       goal.current = { target: new Vector3(0, 1.4, 0), cam: dir.multiplyScalar(10.5).add(new Vector3(0, 4.2, 0)) };
     } else if (selectedId) {
-      const pl = PLACEMENTS.find((p) => (p.agentId ?? VACANT_ID) === selectedId);
+      const pl = PLACEMENTS.find((p) => placementId(p) === selectedId);
       if (!pl) return;
       const box = new Vector3(...pl.position);
       const inward = box.clone().normalize().multiplyScalar(-1);
