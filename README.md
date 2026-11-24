@@ -9,25 +9,46 @@ a který ti umí zavolat.
 Ovládání: tažením otáčíš, kolečkem (na telefonu dvěma prsty) přibližuješ, kliknutím na box
 nebo radnici se kamera přiblíží a otevře detail. V noci jdou roboti k posteli.
 
-## Zprovoznění na počítači
+## Instalace na jedno kliknutí
 
-1. **Nainstaluj Node.js 22 nebo novější** z <https://nodejs.org> (verze „LTS“).
-2. **Stáhni projekt** (z GitHubu nebo jako ZIP) a v jeho složce otevři terminál
-   (Windows: v Průzkumníku klikni do adresního řádku, napiš `cmd` a Enter).
-3. Nainstaluj závislosti:
-   ```bash
-   npm install
-   ```
-4. **Nastav klíč a heslo.** Zkopíruj soubor `.env.example` jako `.env` a vyplň:
-   - `ANTHROPIC_API_KEY` – klíč z <https://console.anthropic.com/settings/keys>
-   - `OFFICE_PASSWORD` – heslo do kanceláře (vymysli si vlastní; bez něj kancelář běží jen na tomhle počítači)
-5. Spusť kancelář:
-   ```bash
-   npm start
-   ```
-   a otevři <http://localhost:8787>. Klikni na Ondika a napiš mu.
+### Windows
+1. Stáhni projekt jako ZIP (na GitHubu **Code → Download ZIP**) a **rozbal ho** (pravé tlačítko →
+   *Extrahovat vše…*) někam, kde zůstane – třeba do *Dokumentů*. Nespouštěj ho přímo ze ZIPu.
+2. V rozbalené složce dvakrát klikni na **`Nainstalovat-Windows.bat`**.
+   Instalace:
+   - zkontroluje Node.js a když chybí, nabídne jeho instalaci,
+   - stáhne knihovny a sestaví městečko,
+   - zeptá se na **Claude API klíč** a heslo (heslo jen pro přístup z telefonu),
+   - když máš víc monitorů, zeptá se, **na kterém** má městečko běžet a jestli přes celou obrazovku,
+   - vytvoří na ploše ikonu **Městečko Ondik**.
+3. Hotovo – od teď stačí **dvojklik na ikonu na ploše**.
 
-Soubor `.env` a složka `data/` (historie chatu) zůstávají jen u tebe a na GitHub se nenahrávají.
+Ikona spustí server (minimalizované okno *Mestecko Ondik – server* na liště – jeho zavřením
+městečko vypneš) a otevře městečko jako samostatné okno bez lišty prohlížeče (Chrome nebo Edge).
+Pokud se instalace zeptá na „neznámého vydavatele“, zvol *Další informace → Přesto spustit*.
+
+### Mac
+1. Stáhni ZIP z GitHubu a rozbal ho (třeba do *Dokumentů*).
+2. Na **`Nainstalovat-Mac.command`** klikni **pravým tlačítkem → Otevřít** (poprvé to macOS jinak nedovolí).
+3. Na ploše se objeví aplikace **Městečko Ondik**. Server poběží na pozadí do vypnutí počítače;
+   ručně ho vypneš příkazem `scripts/zastavit.sh`.
+
+### Druhý monitor a celá obrazovka
+- Monitor a celou obrazovku nastavíš v souboru `.env` (`OKNO_POZICE=x,y`, `OKNO_CELA_OBRAZOVKA=ano`)
+  – na Windows je za tebe vyplní instalace.
+- V městečku je vpravo nahoře tlačítko **⛶** pro celou obrazovku; v okně funguje i **F11**.
+- Okno si jinak pamatuje, kde jsi ho naposledy nechal.
+
+### Aktualizace
+Stáhni nový ZIP, rozbal ho **přes původní složku** (nastavení `.env` a historie chatu v `data/`
+zůstanou) a znovu spusť instalaci – nastavení nepřepíše a jen všechno znovu sestaví.
+
+### Ruční spuštění (pro pokročilé)
+```bash
+npm install
+cp .env.example .env   # doplň ANTHROPIC_API_KEY
+npm start              # http://localhost:8787
+```
 
 ## Přístup z telefonu (Tailscale)
 

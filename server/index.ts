@@ -155,8 +155,8 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`🏢 Kancelář Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
-  if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je kancelář dostupná jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');
+  if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');
   else console.log(`📱 Přístup ze sítě je zapnutý (port ${PORT}), chráněný heslem.`);
 });

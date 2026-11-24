@@ -22,6 +22,16 @@ export default function App() {
     void fetchStatus().then(setStatus);
   }, []);
   useEffect(refreshStatus, [refreshStatus]);
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const onChange = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
   const setAgentBusy = useCallback((agentId: string, isBusy: boolean) => {
     setBusy((prev) => {
       const next = new Set(prev);
@@ -71,6 +81,14 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            className="icon-btn"
+            onClick={toggleFullscreen}
+            title={fullscreen ? 'Ukončit celou obrazovku (Esc)' : 'Celá obrazovka'}
+            aria-label={fullscreen ? 'Ukončit celou obrazovku' : 'Celá obrazovka'}
+          >
+            {fullscreen ? '🗗' : '⛶'}
+          </button>
           <time className="clock">{time.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</time>
         </div>
       </header>
