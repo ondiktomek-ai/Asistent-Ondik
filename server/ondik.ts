@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AGENTS } from '../src/world/agents.ts';
 import { loadConversation, saveConversation, type DisplayMessage } from './store.ts';
+import { apiKeyConfigured, nowText } from './config.ts';
+import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
+
+export { apiKeyConfigured };
 
 export const MODEL = process.env.CLAUDE_MODEL ?? 'claude-opus-5-5';
 
@@ -10,9 +14,6 @@ function getClient() {
   return client;
 }
 
-export function apiKeyConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-}
 
 function teamDescription(): string {
   return AGENTS.filter((a) => a.id !== 'ondik')
@@ -42,17 +43,6 @@ export function isBusy(agentId: string) {
   return busy.has(agentId);
 }
 
-function nowText() {
-  return new Date().toLocaleString('cs-CZ', {
-    timeZone: process.env.TZ_DISPLAY ?? 'Europe/Prague',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export async function getHistory(agentId: string): Promise<DisplayMessage[]> {
   return (await loadConversation(agentId)).display;
@@ -67,29 +57,61 @@ interface ChatHandlers {
   signal: AbortSignal;
 }
 
-/** Pošle zprávu Ondikovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
-export async function chatWithOndik(text: string, { onText, signal }: ChatHandlers): Promise<string> {
-  const agentId = 'ondik';
-  if (busy.has(agentId)) throw new Error('Ondik ještě odpovídá na předchozí zprávu.');
+interface AgentChatConfig {
+  name: string;
+  model: string;
+  system: string;
+  effort: 'low' | 'medium' | 'high';
+  /** Serverová záloha při odmítnutí – jen u modelů, které ji podporují (Opus 5.5 ano, Haiku ne). */
+  fallbacks: boolean;
+  /** Podklady přiložené ke každé otázce (jako systémová zpráva). */
+  context: () => Promise<string>;
+}
+
+/** Agenti, se kterými se dá psát. */
+export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
+  ondik: {
+    name: 'Ondik',
+    model: MODEL,
+    system: SYSTEM_PROMPT,
+    effort: 'medium',
+    fallbacks: true,
+    context: async () => `Aktuální datum a čas: ${nowText()}.`,
+  },
+  echo: {
+    name: 'Echo',
+    model: ECHO_MODEL,
+    system: ECHO_SYSTEM,
+    effort: 'low',
+    fallbacks: false,
+    context: echoContext,
+  },
+};
+
+/** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
+export async function chatWithAgent(agentId: string, text: string, { onText, signal }: ChatHandlers): Promise<string> {
+  const cfg = CHAT_AGENTS[agentId];
+  if (!cfg) throw new Error('S tímto agentem se zatím psát nedá.');
+  if (busy.has(agentId)) throw new Error(`${cfg.name} ještě odpovídá na předchozí zprávu.`);
   busy.add(agentId);
   try {
     const conv = await loadConversation(agentId);
+    // Historie se jen přidává (nic se v ní nepřepisuje), podklady jdou jako systémová zpráva za otázkou.
     const messages: Anthropic.Beta.BetaMessageParam[] = [
       ...conv.api,
       { role: 'user', content: text },
-      { role: 'system', content: `Aktuální datum a čas: ${nowText()}.` },
+      { role: 'system', content: await cfg.context() },
     ];
 
     const stream = getClient().beta.messages.stream(
       {
-        model: MODEL,
+        model: cfg.model,
         max_tokens: 16000,
-        system: SYSTEM_PROMPT,
+        system: cfg.system,
         cache_control: { type: 'ephemeral' },
-        output_config: { effort: 'medium' },
-        // Když Claude Opus 5.5 požadavek odmítne, API ho automaticky zkusí na záložním modelu.
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
+        output_config: { effort: cfg.effort },
+        // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
+        ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
         messages,
       },
       { signal },
@@ -98,7 +120,7 @@ export async function chatWithOndik(text: string, { onText, signal }: ChatHandle
     const final = await stream.finalMessage();
 
     if (final.stop_reason === 'refusal') {
-      throw new Error('Tuhle žádost Ondik nemůže zpracovat.');
+      throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
     }
 
     const reply = final.content

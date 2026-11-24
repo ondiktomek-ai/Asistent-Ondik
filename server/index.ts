@@ -5,7 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { networkInterfaces } from 'node:os';
 import Anthropic from '@anthropic-ai/sdk';
-import { MODEL, apiKeyConfigured, chatWithOndik, clearHistory, getHistory, isBusy } from './ondik.ts';
+import { CHAT_AGENTS, MODEL, apiKeyConfigured, chatWithAgent, clearHistory, getHistory, isBusy } from './ondik.ts';
 import { digestState, generateDigest, getDigest, latestNews, startReporter } from './reporter.ts';
 import { getWeather } from './weather.ts';
 
@@ -14,7 +14,7 @@ const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
 // Bez hesla poslouchá server jen na tomto počítači; s heslem i v síti (např. přes Tailscale).
 const HOST = process.env.HOST ?? (PASSWORD ? '0.0.0.0' : '127.0.0.1');
 const DIST = path.resolve('dist');
-const CONNECTED_AGENTS = new Set(['ondik']);
+const CONNECTED_AGENTS = new Set(Object.keys(CHAT_AGENTS));
 /** Agenti, kteří pracují sami (bez chatu). */
 const ACTIVE_AGENTS = ['echo'];
 
@@ -125,7 +125,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     return json(res, 400, { error: errorMessage(err) });
   }
   if (!text) return json(res, 400, { error: 'Prázdná zpráva.' });
-  if (isBusy(agentId)) return json(res, 409, { error: 'Ondik ještě odpovídá na předchozí zprávu.' });
+  if (isBusy(agentId)) return json(res, 409, { error: `${CHAT_AGENTS[agentId].name} ještě odpovídá na předchozí zprávu.` });
 
   // Odpověď streamujeme jako Server-Sent Events.
   res.writeHead(200, {
@@ -140,7 +140,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     if (!res.writableFinished) abort.abort();
   });
   try {
-    await chatWithOndik(text, { onText: (t) => send('delta', { text: t }), signal: abort.signal });
+    await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), signal: abort.signal });
     send('done', {});
   } catch (err) {
     if (!abort.signal.aborted) {

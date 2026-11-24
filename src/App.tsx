@@ -53,6 +53,14 @@ export default function App() {
     if (newsroom.digests?.generating) s.add('echo');
     return s;
   }, [busy, newsroom.digests?.generating]);
+  const busyLabels = useMemo<Record<string, string>>(
+    () => {
+      const labels: Record<string, string> = {};
+      if (newsroom.digests?.generating) labels.echo = '📰 Píšu plakátek…';
+      return labels;
+    },
+    [newsroom.digests?.generating],
+  );
 
   const [poster, setPoster] = useState<Digest | null>(null);
   const autoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,7 +151,7 @@ export default function App() {
 
       <main className={`stage${selected || isVacantId(selectedId) ? ' panel-open' : ''}`}>
         <div className="world-wrap">
-          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={allBusy} />
+          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={allBusy} busyLabels={busyLabels} />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {poster && <DigestPoster digest={poster} onClose={closePoster} />}
         </div>

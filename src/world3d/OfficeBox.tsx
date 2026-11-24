@@ -21,11 +21,13 @@ interface OfficeBoxProps {
   darkness: number;
   time: Date;
   busy: boolean;
+  /** Text bubliny, když robot pracuje (výchozí „Přemýšlím…“). */
+  busyText?: string;
   onSelect: (id: string) => void;
 }
 
 /** Jeden kancelářský box: otevřený „domeček pro panenky“ – byt + pracoviště agenta. */
-export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, night, darkness, time, busy, onSelect }: OfficeBoxProps) {
+export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, night, darkness, time, busy, busyText, onSelect }: OfficeBoxProps) {
   const [hover, setHover] = useState(false);
   const ready = useSceneReady();
   const accent = agent?.color ?? '#8f9bb5';
@@ -55,6 +57,7 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
   const backWall = useRef<Group>(null);
   const leftWall = useRef<Group>(null);
   const rightWall = useRef<Group>(null);
+  const wallDecor = useRef<Group>(null);
   const [cam] = useState(() => new Vector3());
   const lowered = useRef({ back: false, left: false, right: false });
   useFrame(({ camera }, dt) => {
@@ -71,6 +74,8 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
       if (g) g.scale.y += ((isLow ? 0.12 : 1) - g.scale.y) * k;
     };
     set(backWall.current, low.back);
+    // věci na zadní zdi jsou vidět, jen když zeď stojí
+    if (wallDecor.current && backWall.current) wallDecor.current.visible = backWall.current.scale.y > 0.9;
     set(leftWall.current, low.left);
     set(rightWall.current, low.right);
   });
@@ -108,7 +113,8 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
           <Plant p={[-2.55, 0, 1.9]} s={0.9} />
           {/* pracoviště */}
           {interior.render({ accent, time, night })}
-          <Robot3D color={agent.color} spots={interior.spots} nightSpot={NIGHT_SPOT} night={night && !busy} busy={busy} lines={agent.idleLines} busyText={agent.id === 'echo' ? '📰 Píšu plakátek…' : undefined} />
+          {interior.wall && <group ref={wallDecor}>{interior.wall({ accent, time, night })}</group>}
+          <Robot3D color={agent.color} spots={interior.spots} nightSpot={NIGHT_SPOT} night={night && !busy} busy={busy} lines={agent.idleLines} busyText={busyText} />
         </>
       ) : (
         <>

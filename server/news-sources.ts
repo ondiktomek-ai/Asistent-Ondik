@@ -26,3 +26,5 @@ export const NEWS_SOURCES: NewsSource[] = [
   { id: 'idnes-olomouc', name: 'iDNES Olomoucký kraj', url: 'https://servis.idnes.cz/rss.aspx?c=olomouc', scope: 'region' },
   { id: 'prerovsky-denik', name: 'Přerovský deník', url: 'https://prerovsky.denik.cz/rss/', scope: 'region' },
 ];
+
+export const SCOPE_NAMES: Record<NewsScope, string> = { svet: 'svět', cesko: 'Česko', region: 'region' };

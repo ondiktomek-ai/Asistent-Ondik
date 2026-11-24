@@ -37,6 +37,8 @@ export interface InteriorCtx {
 export interface Interior {
   floor: string;
   render: (c: InteriorCtx) => ReactNode;
+  /** Věci pověšené na zadní zdi – schovají se, když zeď kvůli výhledu klesne. */
+  wall?: (c: InteriorCtx) => ReactNode;
   /** Místa, kam robot během dne chodí (lokální souřadnice boxu, y = 0). */
   spots: V3[];
 }
@@ -45,13 +47,23 @@ export interface Interior {
  * Vnitřek boxů. Levá zadní část (x < -1.6) je „byt“ – postel a noční stolek,
  * pravá část je pracoviště podle zaměření agenta.
  */
+/**
+ * Hloubka pro věci na zadní zdi. Vnitřní líc zdi je na z = -2.35;
+ * věci musí být zřetelně před ním, jinak se se zdí „přetahují“ a blikají.
+ */
+const WALL_Z = -2.3;
+
 export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
   newsroom: {
     floor: '#4a2f36',
+    wall: ({ accent }) => (
+      <>
+        <TvWall p={[0.9, 1.45, WALL_Z]} colors={['#4f8ef7', accent, '#f5b83d', '#22c3c9', '#34c47c', '#a874f7']} />
+        <LedTicker p={[0, 2.16, WALL_Z]} color={accent} />
+      </>
+    ),
     render: ({ accent }) => (
       <>
-        <TvWall p={[0.9, 1.45, -2.38]} colors={['#4f8ef7', accent, '#f5b83d', '#22c3c9', '#34c47c', '#a874f7']} />
-        <LedTicker p={[0, 2.18, -2.37]} color={accent} />
         <Rug p={[0.9, 0, -0.3]} w={2.4} d={1.8} color={accent} />
         <Desk p={[0.9, 0, -0.6]} w={1.8} monitors={2} screen="#ffb3b8" />
         <Microphone p={[0.25, 0.77, -0.45]} />
@@ -89,10 +101,14 @@ export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
   },
   calendar: {
     floor: '#6b4a32',
-    render: ({ accent, time }) => (
+    wall: ({ accent, time }) => (
       <>
-        <CalendarBoard p={[0.6, 1.45, -2.38]} accent={accent} />
-        <WallClock p={[2.2, 1.6, -2.38]} time={time} />
+        <CalendarBoard p={[0.6, 1.45, WALL_Z]} accent={accent} />
+        <WallClock p={[2.2, 1.6, WALL_Z]} time={time} />
+      </>
+    ),
+    render: ({ accent }) => (
+      <>
         <Desk p={[2.0, 0, -1.6]} w={1.3} screen="#ffd0a8" />
         <Rug p={[0.5, 0, 0.9]} w={2.2} d={2.0} color={accent} />
         <RoundTable p={[0.5, 0, 0.9]} />
@@ -129,9 +145,9 @@ export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
   },
   finance: {
     floor: '#2f5a4c',
+    wall: ({ accent }) => <BarChartBoard p={[0.3, 1.5, WALL_Z]} color={accent} />,
     render: ({ accent }) => (
       <>
-        <BarChartBoard p={[0.3, 1.5, -2.38]} color={accent} />
         <Cabinet p={[1.45, 0, -2.15]} />
         <Cabinet p={[1.98, 0, -2.15]} />
         <Safe p={[2.55, 0, -1.95]} r={-0.3} />

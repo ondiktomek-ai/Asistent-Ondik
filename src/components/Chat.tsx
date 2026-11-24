@@ -44,6 +44,11 @@ function RichText({ text }: { text: string }) {
   );
 }
 
+const CHAT_HINTS: Record<string, string> = {
+  ondik: 'Napiš, s čím potřebuješ pomoct. Třeba „Co bys mi dnes doporučil udělat jako první?“',
+  echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
+};
+
 export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -157,7 +162,7 @@ export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps)
     <div className="chat">
       <div className="chat-list" ref={listRef}>
         {messages.length === 0 && streaming === null && (
-          <div className="chat-empty">Napiš, s čím potřebuješ pomoct. Třeba „Co bys mi dnes doporučil udělat jako první?“</div>
+          <div className="chat-empty">{CHAT_HINTS[agent.id] ?? 'Napiš, s čím potřebuješ pomoct.'}</div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`msg msg-${m.role}`}>

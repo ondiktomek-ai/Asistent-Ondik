@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { latestNews, newsSince, pollNews, type NewsItem } from './news.ts';
 import { getWeather, weatherSentence, type Weather } from './weather.ts';
 import { readJson, writeJson } from './store.ts';
-import { apiKeyConfigured } from './ondik.ts';
+import { apiKeyConfigured } from './config.ts';
 
 export const REPORTER_MODEL = process.env.REPORTER_MODEL || 'claude-haiku-5-5';
 const POLL_MINUTES = Number(process.env.ZPRAVY_INTERVAL_MIN || 10);

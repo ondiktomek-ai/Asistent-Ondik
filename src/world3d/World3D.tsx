@@ -16,6 +16,8 @@ interface World3DProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   busy: Set<string>;
+  /** Vlastní text bubliny pracujícího robota (agentId → text). */
+  busyLabels?: Record<string, string>;
 }
 
 /** Výchozí pohled na celé městečko; na úzké (telefonní) obrazovce víc z dálky. */
@@ -23,7 +25,7 @@ function overview(aspect: number) {
   return aspect < 0.85 ? { height: 44, dist: 40 } : { height: 19, dist: 24 };
 }
 
-export function World3D({ time, lightMode, selectedId, onSelect, busy }: World3DProps) {
+export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {} }: World3DProps) {
   const darkness = darknessFor(time, lightMode);
   const night = darkness > 0.5;
   const [initial] = useState(() => overview(window.innerWidth / Math.max(1, window.innerHeight - 120)));
@@ -36,7 +38,7 @@ export function World3D({ time, lightMode, selectedId, onSelect, busy }: World3D
       camera={{ position: [0, initial.height, initial.dist], fov: 45, near: 0.8, far: 260 }}
       onPointerMissed={() => onSelect(null)}
     >
-      <Scene time={time} darkness={darkness} night={night} selectedId={selectedId} onSelect={onSelect} busy={busy} />
+      <Scene time={time} darkness={darkness} night={night} selectedId={selectedId} onSelect={onSelect} busy={busy} busyLabels={busyLabels} />
     </Canvas>
   );
 }
@@ -48,6 +50,7 @@ function Scene({
   selectedId,
   onSelect,
   busy,
+  busyLabels = {},
 }: {
   time: Date;
   darkness: number;
@@ -55,6 +58,8 @@ function Scene({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   busy: Set<string>;
+  /** Vlastní text bubliny pracujícího robota (agentId → text). */
+  busyLabels?: Record<string, string>;
 }) {
   const sky = useMemo(() => new Color('#a9dcff').lerp(new Color('#0b1330'), darkness), [darkness]);
   const select = onSelect as (id: string) => void;
@@ -98,6 +103,7 @@ function Scene({
             darkness={darkness}
             time={time}
             busy={agent ? busy.has(agent.id) : false}
+            busyText={agent ? busyLabels[agent.id] : undefined}
             onSelect={select}
           />
         );

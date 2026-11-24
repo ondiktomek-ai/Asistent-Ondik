@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { AgentDef, AgentStatus } from '../world/types';
 import { Robot } from './Robot';
 import { Chat } from './Chat';
@@ -24,6 +25,7 @@ interface AgentPanelProps {
 }
 
 export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange, newsroom, onOpenPoster }: AgentPanelProps) {
+  const [echoTab, setEchoTab] = useState<'chat' | 'zpravy'>('chat');
   const open = !!agent || vacant;
   const connected = !!agent && !!status?.connectedAgents.includes(agent.id);
   const chatCapable = !!agent && (connected || agent.id === 'ondik');
@@ -109,8 +111,20 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
 
           {isReporter ? (
             <>
+              <div className="tabs" role="tablist">
+                <button role="tab" aria-selected={echoTab === 'chat'} className={echoTab === 'chat' ? 'active' : ''} onClick={() => setEchoTab('chat')}>
+                  💬 Chat
+                </button>
+                <button role="tab" aria-selected={echoTab === 'zpravy'} className={echoTab === 'zpravy' ? 'active' : ''} onClick={() => setEchoTab('zpravy')}>
+                  📰 Zprávy a počasí
+                </button>
+              </div>
               <section className="chat-section">
-                <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                {echoTab === 'chat' ? (
+                  <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />
+                ) : (
+                  <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                )}
               </section>
               <details className="about">
                 <summary>O agentovi</summary>
