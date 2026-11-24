@@ -11,7 +11,7 @@ export interface Rect {
 }
 
 /** Vizuální motiv kanceláře – určuje nábytek a podlahu. */
-export type ThemeId = 'mail' | 'calendar' | 'research' | 'finance' | 'workshop' | 'townhall';
+export type ThemeId = 'mail' | 'calendar' | 'research' | 'finance' | 'workshop' | 'newsroom' | 'townhall';
 
 export type ToolStatus = 'planned' | 'connected';
 

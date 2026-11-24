@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { fetchStatus, type ServerStatus } from './api';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { fetchDigest, fetchStatus, type Digest, type ServerStatus } from './api';
+import { useNewsroom } from './hooks/useNewsroom';
+import { NewsTicker } from './components/NewsTicker';
+import { DigestPoster } from './components/DigestPoster';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
 import { isVacantId } from './world/layout';
 import { World3D } from './world3d/World3D';
@@ -41,6 +44,51 @@ export default function App() {
     });
   }, []);
   const selected = selectedId ? (AGENT_BY_ID[selectedId] ?? null) : null;
+
+  // --- Echo: zprávy, počasí, plakátky ---
+  const serverOnline = !!status && (!status.authRequired || status.authorized);
+  const newsroom = useNewsroom(serverOnline);
+  const allBusy = useMemo(() => {
+    const s = new Set(busy);
+    if (newsroom.digests?.generating) s.add('echo');
+    return s;
+  }, [busy, newsroom.digests?.generating]);
+
+  const [poster, setPoster] = useState<Digest | null>(null);
+  const autoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closePoster = useCallback(() => {
+    if (autoClose.current) clearTimeout(autoClose.current);
+    setPoster(null);
+  }, []);
+  const openPoster = useCallback(
+    (id?: string) => {
+      if (autoClose.current) clearTimeout(autoClose.current);
+      if (!id || id === newsroom.digests?.latest?.id) setPoster(newsroom.digests?.latest ?? null);
+      else void fetchDigest(id).then(setPoster).catch(() => {});
+    },
+    [newsroom.digests?.latest],
+  );
+  // Nový hodinový plakátek se sám ukáže (a po 3 minutách zase schová).
+  const latest = newsroom.digests?.latest;
+  useEffect(() => {
+    if (!latest) return;
+    const KEY = 'echo-posledni-plakatek';
+    let seen: string | null = null;
+    try {
+      seen = localStorage.getItem(KEY);
+    } catch {
+      // bez úložiště prostě ukážeme
+    }
+    if (seen === latest.id || Date.now() - Date.parse(latest.createdAt) > 70 * 60_000) return;
+    try {
+      localStorage.setItem(KEY, latest.id);
+    } catch {
+      // nevadí
+    }
+    setPoster(latest);
+    if (autoClose.current) clearTimeout(autoClose.current);
+    autoClose.current = setTimeout(() => setPoster(null), 3 * 60_000);
+  }, [latest]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,11 +141,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="stage">
+      <main className={`stage${selected || isVacantId(selectedId) ? ' panel-open' : ''}`}>
         <div className="world-wrap">
-          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={busy} />
+          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={allBusy} />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
+          {poster && <DigestPoster digest={poster} onClose={closePoster} />}
         </div>
+        <NewsTicker newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={() => openPoster()} onOpenEcho={() => setSelectedId('echo')} />
         <AgentPanel
           agent={selected}
           vacant={isVacantId(selectedId)}
@@ -105,6 +155,8 @@ export default function App() {
           onClose={() => setSelectedId(null)}
           onStatusChange={refreshStatus}
           onBusyChange={setAgentBusy}
+          newsroom={newsroom}
+          onOpenPoster={openPoster}
         />
       </main>
     </div>

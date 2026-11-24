@@ -19,6 +19,11 @@ import {
   ServerRack,
   WallClock,
   Workbench,
+  TvWall,
+  LedTicker,
+  Microphone,
+  Newspapers,
+  WeatherStation,
 } from './props';
 
 type V3 = [number, number, number];
@@ -41,6 +46,28 @@ export interface Interior {
  * pravá část je pracoviště podle zaměření agenta.
  */
 export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
+  newsroom: {
+    floor: '#4a2f36',
+    render: ({ accent }) => (
+      <>
+        <TvWall p={[0.9, 1.45, -2.38]} colors={['#4f8ef7', accent, '#f5b83d', '#22c3c9', '#34c47c', '#a874f7']} />
+        <LedTicker p={[0, 2.18, -2.37]} color={accent} />
+        <Rug p={[0.9, 0, -0.3]} w={2.4} d={1.8} color={accent} />
+        <Desk p={[0.9, 0, -0.6]} w={1.8} monitors={2} screen="#ffb3b8" />
+        <Microphone p={[0.25, 0.77, -0.45]} />
+        <Newspapers p={[1.6, 0.77, -0.55]} r={0.3} />
+        <Newspapers p={[2.6, 0, 0.3]} r={-0.4} />
+        <WeatherStation p={[2.45, 0, 1.75]} />
+      </>
+    ),
+    spots: [
+      [0.9, 0, 0.25],
+      [2.0, 0, -1.7],
+      [2.0, 0, 1.2],
+      [-1.0, 0, 0.5],
+      [0.2, 0, 1.8],
+    ],
+  },
   mail: {
     floor: '#3b4f78',
     render: ({ accent }) => (

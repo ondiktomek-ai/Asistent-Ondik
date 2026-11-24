@@ -2,6 +2,8 @@ import type { AgentDef, AgentStatus } from '../world/types';
 import { Robot } from './Robot';
 import { Chat } from './Chat';
 import type { ServerStatus } from '../api';
+import type { Newsroom } from '../hooks/useNewsroom';
+import { ReporterPanel } from './ReporterPanel';
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
   setup: 'Čeká na nastavení',
@@ -17,12 +19,16 @@ interface AgentPanelProps {
   onClose: () => void;
   onStatusChange: () => void;
   onBusyChange: (agentId: string, busy: boolean) => void;
+  newsroom: Newsroom;
+  onOpenPoster: (id?: string) => void;
 }
 
-export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange }: AgentPanelProps) {
+export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange, newsroom, onOpenPoster }: AgentPanelProps) {
   const open = !!agent || vacant;
   const connected = !!agent && !!status?.connectedAgents.includes(agent.id);
   const chatCapable = !!agent && (connected || agent.id === 'ondik');
+  const serverOnline = !!status && (!status.authRequired || status.authorized);
+  const isReporter = agent?.id === 'echo';
   const details = agent && (
     <>
           <p className="panel-desc">{agent.description}</p>
@@ -52,7 +58,14 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
           </section>
     </>
   );
-  const agentStatus: AgentStatus | undefined = agent ? (connected && status?.ready ? 'idle' : agent.status) : undefined;
+  const active = !!agent && !!status?.activeAgents?.includes(agent.id);
+  const agentStatus: AgentStatus | undefined = agent
+    ? isReporter && newsroom.digests?.generating
+      ? 'working'
+      : (connected && status?.ready) || active
+        ? 'idle'
+        : agent.status
+    : undefined;
   return (
     <aside className={`panel${open ? ' open' : ''}`} aria-hidden={!open}>
       {vacant && !agent && (
@@ -94,7 +107,17 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
             </div>
           </header>
 
-          {chatCapable ? (
+          {isReporter ? (
+            <>
+              <section className="chat-section">
+                <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+              </section>
+              <details className="about">
+                <summary>O agentovi</summary>
+                {details}
+              </details>
+            </>
+          ) : chatCapable ? (
             <>
               <section className="chat-section">
                 <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />

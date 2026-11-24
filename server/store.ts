@@ -35,3 +35,21 @@ export async function saveConversation(agentId: string, conv: Conversation): Pro
   await writeFile(tmp, JSON.stringify(conv, null, 1), 'utf8');
   await rename(tmp, file);
 }
+
+/** Přečte JSON soubor z data/, nebo vrátí výchozí hodnotu. */
+export async function readJson<T>(name: string, fallback: T): Promise<T> {
+  try {
+    return JSON.parse(await readFile(path.join(DATA_DIR, name), 'utf8')) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Atomicky zapíše JSON do data/ (přes dočasný soubor). */
+export async function writeJson(name: string, value: unknown): Promise<void> {
+  await mkdir(DATA_DIR, { recursive: true });
+  const file = path.join(DATA_DIR, name);
+  const tmp = `${file}.tmp`;
+  await writeFile(tmp, JSON.stringify(value), 'utf8');
+  await rename(tmp, file);
+}

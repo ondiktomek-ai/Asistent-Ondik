@@ -6,6 +6,8 @@ import path from 'node:path';
 import { networkInterfaces } from 'node:os';
 import Anthropic from '@anthropic-ai/sdk';
 import { MODEL, apiKeyConfigured, chatWithOndik, clearHistory, getHistory, isBusy } from './ondik.ts';
+import { digestState, generateDigest, getDigest, latestNews, startReporter } from './reporter.ts';
+import { getWeather } from './weather.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
@@ -13,6 +15,8 @@ const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
 const HOST = process.env.HOST ?? (PASSWORD ? '0.0.0.0' : '127.0.0.1');
 const DIST = path.resolve('dist');
 const CONNECTED_AGENTS = new Set(['ondik']);
+/** Agenti, kteří pracují sami (bez chatu). */
+const ACTIVE_AGENTS = ['echo'];
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -69,9 +73,35 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
       authRequired: Boolean(PASSWORD),
       authorized: authorized(req),
       connectedAgents: [...CONNECTED_AGENTS],
+      activeAgents: ACTIVE_AGENTS,
     });
   }
   if (!authorized(req)) return json(res, 401, { error: 'Špatné heslo.' });
+
+  // --- Echo: zprávy, počasí, plakátky ---
+  if (url.pathname === '/api/news') return json(res, 200, await latestNews(Number(url.searchParams.get('limit') ?? 80)));
+  if (url.pathname === '/api/weather') {
+    try {
+      return json(res, 200, await getWeather());
+    } catch (err) {
+      return json(res, 502, { error: `Počasí se nepodařilo načíst: ${errorMessage(err)}` });
+    }
+  }
+  if (url.pathname === '/api/digest') {
+    if (req.method === 'POST') {
+      try {
+        return json(res, 200, await generateDigest());
+      } catch (err) {
+        return json(res, 409, { error: errorMessage(err) });
+      }
+    }
+    return json(res, 200, await digestState());
+  }
+  const dm = url.pathname.match(/^\/api\/digest\/([a-f0-9-]+)$/);
+  if (dm) {
+    const d = await getDigest(dm[1]);
+    return d ? json(res, 200, d) : json(res, 404, { error: 'Plakátek nenalezen.' });
+  }
 
   const m = url.pathname.match(/^\/api\/chat\/([a-z0-9-]+)$/);
   if (!m) return json(res, 404, { error: 'Neznámá adresa.' });
@@ -164,6 +194,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
+  if (process.env.ZPRAVY !== 'vypnuto') startReporter();
   console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
   if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');

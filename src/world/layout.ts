@@ -8,7 +8,7 @@ export const VACANT_ID = 'vacant';
 export const TOWN_HALL_ID = 'ondik';
 
 /** Pořadí boxů po kruhu. `null` = volný box pro budoucího agenta. */
-export const RING: (string | null)[] = [null, 'postak', 'chronos', 'lexa', 'kasa', 'bit', null];
+export const RING: (string | null)[] = ['echo', 'postak', 'chronos', 'lexa', 'kasa', 'bit', null];
 
 export const RING_RADIUS = 11.5;
 export const BOX = { w: 6, d: 5, h: 2.4 };

@@ -71,17 +71,29 @@ npm run dev:server   # API server s automatickým restartem (port 8787)
 npm run dev          # kancelář s hot-reloadem na http://localhost:5173
 ```
 
+## Echo – zpravodaj
+
+- Každých **10 minut** projde zpravodajské weby (RSS) a nové zprávy pošle do **pásu vpravo**
+  (na telefonu běží dole). Seznam zdrojů je v `server/news-sources.ts`, jejich stav vidíš v panelu Echa.
+- Každou **celou hodinu** vylepí **plakátek**: souhrn ze světa, Česka a z okolí Lipníku
+  + vývoj počasí na 24 hodin a 3 dny. Píše ho **Claude Haiku 5.5** (cca 1 $ měsíčně při běhu 24 h denně).
+  Plakátek se sám ukáže a za 3 minuty schová; starší najdeš v panelu Echa.
+- Počasí je z **Open-Meteo** (zdarma, bez klíče) pro Lipník nad Bečvou – jiné místo nastavíš v `.env`
+  (`MISTO_NAZEV`, `MISTO_LAT`, `MISTO_LON`).
+- Bez API klíče Echo funguje taky, jen místo souhrnu ukáže titulky.
+
 ## Tým
 
 | Box         | Agent   | Role                                           | Stav |
 |-------------|---------|------------------------------------------------|------|
 | 🏛️ Radnice  | Ondik   | Hlavní asistent, budoucí Jarvis (hlas, hovory) | ✅ chat přes Claude |
+| 📰 Redakce  | Echo    | Zprávy ze světa, Česka a regionu, hodinové plakátky, počasí | ✅ běží |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář                                | plánováno |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
 | 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      | plánováno |
-| ＋ 2× volný box | –   | Místo pro budoucí agenty                       |      |
+| ＋ Volný box | –      | Místo pro budoucího agenta                     |      |
 
 ## Struktura
 

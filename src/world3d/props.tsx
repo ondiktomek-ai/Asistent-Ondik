@@ -4,7 +4,7 @@
  */
 import { useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, type Group, type Mesh } from 'three';
+import { Color, type Group, type Mesh, type MeshStandardMaterial } from 'three';
 
 type V3 = [number, number, number];
 
@@ -412,6 +412,113 @@ export function MovingBoxes({ p }: { p: V3 }) {
       <B p={[0, 0.3, 0.31]} s={[0.12, 0.6, 0.02]} c="#e8d3a8" />
       <B p={[0.75, 0.22, 0.1]} s={[0.55, 0.44, 0.5]} c="#a87d50" />
       <B p={[0.1, 0.78, 0.02]} s={[0.5, 0.36, 0.45]} c="#c29766" />
+    </G>
+  );
+}
+
+// ---------------------------------------------------------------- redakce (Echo)
+
+/** Stěna televizí – každá obrazovka pomalu mění barvu, jako by běželo zpravodajství. */
+export function TvWall({ p, cols = 3, rows = 2, colors }: { p: V3; cols?: number; rows?: number; colors: string[] }) {
+  const screens = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    screens.current?.children.forEach((m, i) => {
+      const mat = (m as Mesh).material as MeshStandardMaterial;
+      mat.emissiveIntensity = 0.55 + 0.35 * Math.sin(clock.elapsedTime * (0.7 + i * 0.23) + i);
+    });
+  });
+  const w = 0.62;
+  const h = 0.4;
+  return (
+    <G p={p}>
+      <B p={[0, 0, 0]} s={[cols * (w + 0.06) + 0.06, rows * (h + 0.06) + 0.06, 0.06]} c="#151922" />
+      <group ref={screens}>
+        {Array.from({ length: cols * rows }, (_, i) => {
+          const c = i % cols;
+          const r = Math.floor(i / cols);
+          const col = colors[i % colors.length];
+          return (
+            <mesh key={i} position={[(c - (cols - 1) / 2) * (w + 0.06), ((rows - 1) / 2 - r) * (h + 0.06), 0.04]}>
+              <boxGeometry args={[w, h, 0.02]} />
+              <meshStandardMaterial color={col} emissive={col} emissiveIntensity={0.8} />
+            </mesh>
+          );
+        })}
+      </group>
+    </G>
+  );
+}
+
+/** Svítící pás s běžícími „písmenky“ (zpravodajský ticker). */
+export function LedTicker({ p, w = 5.6, color = '#ff5a5f' }: { p: V3; w?: number; color?: string }) {
+  const dots = useRef<Group>(null);
+  const n = 28;
+  useFrame(({ clock }) => {
+    dots.current?.children.forEach((d, i) => {
+      const x = ((((i / n) * w + clock.elapsedTime * 0.6) % w) + w) % w - w / 2;
+      d.position.x = x;
+      d.scale.x = 0.5 + ((i * 7) % 5) * 0.35;
+    });
+  });
+  return (
+    <G p={p}>
+      <B p={[0, 0, 0]} s={[w + 0.1, 0.2, 0.06]} c="#0e1117" />
+      <group ref={dots} position={[0, 0, 0.04]}>
+        {Array.from({ length: n }, (_, i) => (
+          <mesh key={i}>
+            <boxGeometry args={[0.1, 0.07, 0.02]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2} />
+          </mesh>
+        ))}
+      </group>
+    </G>
+  );
+}
+
+export function Microphone({ p }: { p: V3 }) {
+  return (
+    <G p={p}>
+      <C p={[0, 0.01, 0]} r={0.07} h={0.02} c={DARK} />
+      <C p={[0, 0.14, 0]} r={0.012} h={0.26} c="#9aa3b5" seg={6} />
+      <S p={[0, 0.3, 0.02]} r={0.05} c="#2c3140" />
+    </G>
+  );
+}
+
+export function Newspapers({ p, r = 0 }: { p: V3; r?: number }) {
+  return (
+    <G p={p} r={r}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <B key={i} p={[(i % 2) * 0.03, 0.025 + i * 0.04, (i % 3) * 0.02]} s={[0.5, 0.035, 0.36]} c={i % 2 ? '#f2efe6' : '#e6e1d3'} />
+      ))}
+      <B p={[0.03, 0.27, 0.02]} s={[0.36, 0.005, 0.08]} c="#1d2433" />
+    </G>
+  );
+}
+
+/** Meteostanice: stožár, budka s teploměrem a točící se větroměr. */
+export function WeatherStation({ p }: { p: V3 }) {
+  const cups = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (cups.current) cups.current.rotation.y += dt * 3;
+  });
+  return (
+    <G p={p}>
+      <C p={[0, 0.05, 0]} r={0.18} h={0.1} c="#9aa3b5" />
+      <C p={[0, 0.85, 0]} r={0.03} h={1.6} c="#d3d8e2" seg={8} />
+      <B p={[0, 1.05, 0.1]} s={[0.3, 0.32, 0.22]} c="#f4f6fb" />
+      <B p={[0, 1.05, 0.215]} s={[0.04, 0.22, 0.01]} c="#e05d5d" e="#e05d5d" ei={0.6} />
+      <group ref={cups} position={[0, 1.7, 0]}>
+        {[0, 1, 2].map((k) => {
+          const a = (k / 3) * Math.PI * 2;
+          return (
+            <group key={k} rotation={[0, a, 0]}>
+              <B p={[0.14, 0, 0]} s={[0.28, 0.02, 0.02]} c="#9aa3b5" />
+              <S p={[0.28, 0, 0]} r={0.05} c="#e8505b" />
+            </group>
+          );
+        })}
+      </group>
     </G>
   );
 }

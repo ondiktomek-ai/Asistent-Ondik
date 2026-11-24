@@ -33,6 +33,30 @@ export const AGENTS: AgentDef[] = [
     idleLines: ['Co dnes vyřešíme?', 'Všichni na místech!', 'Jarvis mód: brzy…', 'Kávu, šéfe?'],
   },
   {
+    id: 'echo',
+    name: 'Echo',
+    role: 'Zpravodaj',
+    roomName: 'Redakce',
+    icon: '📰',
+    color: '#e8505b',
+    theme: 'newsroom',
+    status: 'setup',
+    description:
+      'Hlídá, co se děje ve světě, v Česku i u nás v Lipníku a okolí. Novinky hned posílá do pásu zpráv vpravo a každou celou hodinu vylepí plakátek se souhrnem a vývojem počasí.',
+    duties: [
+      'Každých 10 minut projde zpravodajské weby',
+      'Nové zprávy posílá do pásu vpravo',
+      'Každou hodinu sepíše plakátek se souhrnem',
+      'Hlásí počasí pro Lipník nad Bečvou',
+    ],
+    tools: [
+      { name: 'Zprávy (RSS)', description: 'ČT24, iROZHLAS, Seznam Zprávy, Novinky, BBC, Guardian, regionální weby', status: 'connected' },
+      { name: 'Počasí (Open-Meteo)', description: 'Aktuální stav, 24 hodin a 3 dny dopředu', status: 'connected' },
+      { name: 'Souhrny (Claude Haiku 5.5)', description: 'Hodinový plakátek z nasbíraných zpráv', status: 'connected' },
+    ],
+    idleLines: ['Mimořádná zpráva!', 'Píšu titulek…', 'Co je nového?', 'Hlásím počasí!', 'Tiskneme!'],
+  },
+  {
     id: 'postak',
     name: 'Pošťák',
     role: 'E-mailový agent',

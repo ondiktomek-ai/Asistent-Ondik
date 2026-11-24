@@ -13,13 +13,15 @@ interface Robot3DProps {
   busy: boolean;
   lines: string[];
   scale?: number;
+  /** Bublina, když robot pracuje. */
+  busyText?: string;
 }
 
 const SPEED = 0.9; // m/s
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 /** Robot-agent. Přes den chodí po svém pracovišti, v noci stojí u postele. */
-export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1 }: Robot3DProps) {
+export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1, busyText = '💭 Přemýšlím…' }: Robot3DProps) {
   const root = useRef<Group>(null);
   const body = useRef<Group>(null);
   const legL = useRef<Mesh>(null);
@@ -111,7 +113,7 @@ export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1
     if (eyes.current) eyes.current.scale.y = night && !walking ? 0.15 : t % 4.5 < 0.12 ? 0.1 : 1;
   });
 
-  const shownBubble = busy ? '💭 Přemýšlím…' : bubble;
+  const shownBubble = busy ? busyText : bubble;
 
   return (
     <group ref={root} scale={scale}>

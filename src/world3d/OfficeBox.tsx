@@ -108,7 +108,7 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
           <Plant p={[-2.55, 0, 1.9]} s={0.9} />
           {/* pracoviště */}
           {interior.render({ accent, time, night })}
-          <Robot3D color={agent.color} spots={interior.spots} nightSpot={NIGHT_SPOT} night={night && !busy} busy={busy} lines={agent.idleLines} />
+          <Robot3D color={agent.color} spots={interior.spots} nightSpot={NIGHT_SPOT} night={night && !busy} busy={busy} lines={agent.idleLines} busyText={agent.id === 'echo' ? '📰 Píšu plakátek…' : undefined} />
         </>
       ) : (
         <>
