@@ -8,6 +8,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CHAT_AGENTS, MODEL, apiKeyConfigured, chatWithAgent, clearHistory, getHistory, isBusy } from './ondik.ts';
 import { digestState, generateDigest, getDigest, latestNews, startReporter } from './reporter.ts';
 import { getWeather } from './weather.ts';
+import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, saveClient } from './google.ts';
+import { agenda } from './calendar.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
@@ -15,6 +17,8 @@ const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
 const HOST = process.env.HOST ?? (PASSWORD ? '0.0.0.0' : '127.0.0.1');
 const DIST = path.resolve('dist');
 const CONNECTED_AGENTS = new Set(Object.keys(CHAT_AGENTS));
+/** Kam Google po přihlášení vrací prohlížeč (klient typu „Desktop app“ povoluje loopback adresu). */
+const GOOGLE_REDIRECT = `http://127.0.0.1:${PORT}/api/google/callback`;
 /** Agenti, kteří pracují sami (bez chatu). */
 const ACTIVE_AGENTS = ['echo'];
 
@@ -73,10 +77,64 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
       authRequired: Boolean(PASSWORD),
       authorized: authorized(req),
       connectedAgents: [...CONNECTED_AGENTS],
+      google: await googleStatus().then((g) => ({ configured: g.configured, connected: g.connected })),
       activeAgents: ACTIVE_AGENTS,
     });
   }
+  // Návrat z přihlášení Googlu – prohlížeč sem přijde přesměrováním (bez hesla městečka),
+  // proto ho chrání jednorázový náhodný „state“ vygenerovaný serverem.
+  if (url.pathname === '/api/google/callback') {
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state') ?? '';
+    let target = '/?kalendar=ok';
+    try {
+      if (!code) throw new Error(url.searchParams.get('error') === 'access_denied' ? 'Přístup ke kalendáři jsi nepovolil.' : 'Google nevrátil přihlašovací kód.');
+      await finishAuth(code, state, GOOGLE_REDIRECT);
+    } catch (err) {
+      target = `/?kalendar=chyba&zprava=${encodeURIComponent(errorMessage(err))}`;
+    }
+    res.writeHead(302, { Location: target, 'Cache-Control': 'no-store' });
+    return res.end();
+  }
+
   if (!authorized(req)) return json(res, 401, { error: 'Špatné heslo.' });
+
+  // --- Google Kalendář (Chronos) ---
+  if (url.pathname === '/api/google/status') return json(res, 200, await googleStatus());
+  if (url.pathname === '/api/google/client' && req.method === 'POST') {
+    try {
+      const body = (await readBody(req)) as { clientId?: string; clientSecret?: string };
+      await saveClient(String(body.clientId ?? ''), String(body.clientSecret ?? ''));
+      return json(res, 200, await googleStatus());
+    } catch (err) {
+      return json(res, 400, { error: errorMessage(err) });
+    }
+  }
+  if (url.pathname === '/api/google/start' && req.method === 'POST') {
+    const host = (req.headers.host ?? '').split(':')[0];
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) {
+      return json(res, 400, { error: 'Propojení s Googlem udělej přímo na počítači, kde městečko běží (ne z telefonu).' });
+    }
+    try {
+      return json(res, 200, { url: await authUrl(GOOGLE_REDIRECT) });
+    } catch (err) {
+      return json(res, 400, { error: errorMessage(err) });
+    }
+  }
+  if (url.pathname === '/api/google/disconnect' && req.method === 'POST') {
+    await googleDisconnect();
+    return json(res, 200, await googleStatus());
+  }
+  if (url.pathname === '/api/calendar/agenda') {
+    const g = await googleStatus();
+    if (!g.connected) return json(res, 200, { connected: false, events: [] });
+    try {
+      const days = Math.min(31, Math.max(1, Number(url.searchParams.get('days') ?? 7)));
+      return json(res, 200, { connected: true, email: g.email, events: await agenda(days) });
+    } catch (err) {
+      return json(res, 502, { error: errorMessage(err) });
+    }
+  }
 
   // --- Echo: zprávy, počasí, plakátky ---
   if (url.pathname === '/api/news') return json(res, 200, await latestNews(Number(url.searchParams.get('limit') ?? 80)));
@@ -140,7 +198,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     if (!res.writableFinished) abort.abort();
   });
   try {
-    await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), signal: abort.signal });
+    await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), onTool: (label) => send('tool', { label }), signal: abort.signal });
     send('done', {});
   } catch (err) {
     if (!abort.signal.aborted) {

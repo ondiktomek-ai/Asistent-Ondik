@@ -7,6 +7,7 @@ export interface ServerStatus {
   authorized: boolean;
   connectedAgents: string[];
   activeAgents?: string[];
+  google?: { configured: boolean; connected: boolean };
 }
 
 export interface ChatMessage {
@@ -72,7 +73,13 @@ export function clearHistory(agentId: string) {
 }
 
 /** Pošle zprávu a průběžně volá onDelta s kousky odpovědi. */
-export async function sendMessage(agentId: string, text: string, onDelta: (t: string) => void, signal?: AbortSignal): Promise<void> {
+export async function sendMessage(
+  agentId: string,
+  text: string,
+  onDelta: (t: string) => void,
+  signal?: AbortSignal,
+  onTool?: (label: string) => void,
+): Promise<void> {
   const res = await fetch(`/api/chat/${agentId}`, {
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/json' }),
@@ -103,6 +110,7 @@ export async function sendMessage(agentId: string, text: string, onDelta: (t: st
       if (!event || data === undefined) continue;
       const payload = JSON.parse(data);
       if (event === 'delta') onDelta(payload.text);
+      else if (event === 'tool') onTool?.(payload.label);
       else if (event === 'error') throw new ApiError(500, payload.message);
       else if (event === 'done') return;
     }
@@ -185,3 +193,33 @@ export const fetchWeather = () => request<Weather>('/api/weather');
 export const fetchDigestState = () => request<DigestState>('/api/digest');
 export const fetchDigest = (id: string) => request<Digest>(`/api/digest/${id}`);
 export const createDigest = () => request<Digest>('/api/digest', { method: 'POST' });
+
+// ---------------------------------------------------------------- Google Kalendář (Chronos)
+
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+}
+
+export interface CalEvent {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  location?: string;
+  description?: string;
+  link?: string;
+}
+
+export const fetchGoogleStatus = () => request<GoogleStatus>('/api/google/status');
+export const saveGoogleClient = (clientId: string, clientSecret: string) =>
+  request<GoogleStatus>('/api/google/client', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId, clientSecret }),
+  });
+export const startGoogleAuth = () => request<{ url: string }>('/api/google/start', { method: 'POST' });
+export const disconnectGoogle = () => request<GoogleStatus>('/api/google/disconnect', { method: 'POST' });
+export const fetchAgenda = (days = 7) => request<{ connected: boolean; email?: string; events: CalEvent[] }>(`/api/calendar/agenda?days=${days}`);

@@ -14,7 +14,7 @@ export interface Conversation {
   display: DisplayMessage[];
 }
 
-const DATA_DIR = path.resolve(process.env.DATA_DIR ?? 'data');
+export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? 'data');
 
 function fileFor(agentId: string) {
   return path.join(DATA_DIR, `chat-${agentId}.json`);

@@ -832,6 +832,219 @@ button {
   margin-top: 12px;
 }
 
+/* ---------- Chronos: kalendář, nastavení Googlu, připomínky ---------- */
+.calpanel h3 {
+  margin-top: 16px;
+}
+
+.gsteps {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #c5cde0;
+}
+
+.gsteps a,
+.calpanel .hint a {
+  color: #ffb27a;
+}
+
+.gform {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gform label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.gform input {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.gform input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.gform .rep-btn {
+  margin-top: 10px;
+}
+
+.gbtn {
+  width: 100%;
+  margin: 6px 0 10px;
+  padding: 11px;
+  font-size: 14px;
+}
+
+.gconnected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #143a28;
+  color: #7ef0b0;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.gconnected span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gdisconnect {
+  margin-top: 16px;
+}
+
+.notice-ok {
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #143a28;
+  border: 1px solid #2a6b4a;
+  color: #b7f5d2;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.calpanel .chat-error {
+  margin-bottom: 12px;
+}
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agenda h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.agenda h4 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.agenda ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda li {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 13.5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-2);
+}
+
+.agenda-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.agenda-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.agenda-title a:hover {
+  text-decoration: underline;
+}
+
+.agenda-title small {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.reminders {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100% - 32px));
+}
+
+.reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #2a1d12;
+  border: 1px solid #ff8a3d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: pop 0.3s ease-out;
+}
+
+.reminder-icon {
+  font-size: 22px;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.reminder-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.reminder-body strong {
+  font-size: 14px;
+}
+
+.reminder-body span {
+  font-size: 12px;
+  color: #ffc9a3;
+}
+
+.reminder-close {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+}
+
 /* ---------- Pás zpráv (Echo) ---------- */
 .ticker {
   width: 300px;

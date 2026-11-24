@@ -82,6 +82,22 @@ npm run dev          # kancelář s hot-reloadem na http://localhost:5173
   (`MISTO_NAZEV`, `MISTO_LAT`, `MISTO_LON`).
 - Bez API klíče Echo funguje taky, jen místo souhrnu ukáže titulky.
 
+## Chronos – Google Kalendář
+
+1. Klikni na **Chronose** → záložka **📅 Kalendář** a projdi průvodce (jednou, cca 10 minut):
+   vytvoříš si u Googlu vlastní „přihlašovací aplikaci“ (projekt v Google Cloud, zapnuté Calendar API,
+   klient typu *Aplikace pro počítač*) a vložíš její **Client ID** a **Client secret**.
+2. **Přihlas se přes Google** – dělej to na počítači, kde městečko běží (ne z telefonu).
+   Varování „Google tuto aplikaci neověřil“ je v pořádku: *Pokročilé → Přejít na Městečko Ondik*.
+3. Hotovo. Chronosovi pak piš třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“
+   nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“. Změny v kalendáři dělá **rovnou** a napíše, co udělal.
+
+- Pracuje s **hlavním kalendářem**, volno hledá **každý den 8:00–20:00** (`PRACOVNI_DOBA`, `PRACOVNI_DNY` v `.env`).
+- Běží na **Claude Sonnet 5.5** (`CHRONOS_MODEL` v `.env`).
+- **10 minut před událostí** se v městečku objeví připomínka.
+- Přihlašovací údaje i tokeny jsou jen u tebe v `data/` (`google-client.json`, `google-token.json`), na GitHub se nenahrávají.
+  Odpojit jde v panelu Chronose, přístup můžeš odebrat i na https://myaccount.google.com/permissions.
+
 ## Tým
 
 | Box         | Agent   | Role                                           | Stav |
@@ -89,7 +105,7 @@ npm run dev          # kancelář s hot-reloadem na http://localhost:5173
 | 🏛️ Radnice  | Ondik   | Hlavní asistent, budoucí Jarvis (hlas, hovory) | ✅ chat přes Claude |
 | 📰 Redakce  | Echo    | Zprávy ze světa, Česka a regionu, hodinové plakátky, počasí | ✅ běží |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
-| 📅 Kalendář | Chronos | Google Kalendář                                | plánováno |
+| 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
 | 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      | plánováno |

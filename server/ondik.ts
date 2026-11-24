@@ -3,6 +3,7 @@ import { AGENTS } from '../src/world/agents.ts';
 import { loadConversation, saveConversation, type DisplayMessage } from './store.ts';
 import { apiKeyConfigured, nowText } from './config.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
+import { CHRONOS_MODEL, CHRONOS_SYSTEM, CHRONOS_TOOLS, TOOL_LABELS, chronosContext, runChronosTool } from './chronos-chat.ts';
 
 export { apiKeyConfigured };
 
@@ -54,6 +55,8 @@ export async function clearHistory(agentId: string) {
 
 interface ChatHandlers {
   onText: (delta: string) => void;
+  /** Agent právě používá nástroj (text pro zobrazení, např. „Dívám se do kalendáře…“). */
+  onTool?: (label: string) => void;
   signal: AbortSignal;
 }
 
@@ -66,7 +69,13 @@ interface AgentChatConfig {
   fallbacks: boolean;
   /** Podklady přiložené ke každé otázce (jako systémová zpráva). */
   context: () => Promise<string>;
+  /** Nástroje, které agent smí používat (např. kalendář). */
+  tools?: Anthropic.Beta.BetaTool[];
+  runTool?: (name: string, input: Record<string, unknown>) => Promise<string>;
+  toolLabels?: Record<string, string>;
 }
+
+const MAX_TOOL_ROUNDS = 10;
 
 /** Agenti, se kterými se dá psát. */
 export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
@@ -77,6 +86,17 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
     effort: 'medium',
     fallbacks: true,
     context: async () => `Aktuální datum a čas: ${nowText()}.`,
+  },
+  chronos: {
+    name: 'Chronos',
+    model: CHRONOS_MODEL,
+    system: CHRONOS_SYSTEM,
+    effort: 'medium',
+    fallbacks: true,
+    context: chronosContext,
+    tools: CHRONOS_TOOLS,
+    runTool: runChronosTool,
+    toolLabels: TOOL_LABELS,
   },
   echo: {
     name: 'Echo',
@@ -89,7 +109,7 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
 };
 
 /** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
-export async function chatWithAgent(agentId: string, text: string, { onText, signal }: ChatHandlers): Promise<string> {
+export async function chatWithAgent(agentId: string, text: string, { onText, onTool, signal }: ChatHandlers): Promise<string> {
   const cfg = CHAT_AGENTS[agentId];
   if (!cfg) throw new Error('S tímto agentem se zatím psát nedá.');
   if (busy.has(agentId)) throw new Error(`${cfg.name} ještě odpovídá na předchozí zprávu.`);
@@ -103,34 +123,59 @@ export async function chatWithAgent(agentId: string, text: string, { onText, sig
       { role: 'system', content: await cfg.context() },
     ];
 
-    const stream = getClient().beta.messages.stream(
-      {
-        model: cfg.model,
-        max_tokens: 16000,
-        system: cfg.system,
-        cache_control: { type: 'ephemeral' },
-        output_config: { effort: cfg.effort },
-        // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
-        ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
-        messages,
-      },
-      { signal },
-    );
-    stream.on('text', onText);
-    const final = await stream.finalMessage();
+    let reply = '';
+    let newRound = false;
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const stream = getClient().beta.messages.stream(
+        {
+          model: cfg.model,
+          max_tokens: 16000,
+          system: cfg.system,
+          cache_control: { type: 'ephemeral' },
+          output_config: { effort: cfg.effort },
+          // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
+          ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
+          ...(cfg.tools ? { tools: cfg.tools } : {}),
+          messages,
+        },
+        { signal },
+      );
+      stream.on('text', (t) => {
+        // text z dalšího kola (po použití nástroje) oddělíme odstavcem
+        if (newRound && reply && !reply.endsWith('\n')) {
+          reply += '\n\n';
+          onText('\n\n');
+        }
+        newRound = false;
+        reply += t;
+        onText(t);
+      });
+      const final = await stream.finalMessage();
 
-    if (final.stop_reason === 'refusal') {
-      throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
+      if (final.stop_reason === 'refusal') throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
+      if (final.stop_reason === 'max_tokens') throw new Error('Odpověď se nevešla do limitu, zkus otázku zjednodušit.');
+      messages.push({ role: 'assistant', content: final.content });
+      if (final.stop_reason !== 'tool_use' || !cfg.runTool) break;
+
+      // provedeme všechny požadované nástroje a výsledky vrátíme v jedné zprávě
+      const uses = final.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use');
+      const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
+      for (const u of uses) {
+        onTool?.(cfg.toolLabels?.[u.name] ?? '🔧 Pracuji…');
+        try {
+          const out = await cfg.runTool(u.name, (u.input ?? {}) as Record<string, unknown>);
+          results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
+        } catch (err) {
+          results.push({ type: 'tool_result', tool_use_id: u.id, content: err instanceof Error ? err.message : String(err), is_error: true });
+        }
+      }
+      messages.push({ role: 'user', content: results });
+      newRound = true;
     }
-
-    const reply = final.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('');
 
     const at = new Date().toISOString();
     await saveConversation(agentId, {
-      api: [...messages, { role: 'assistant', content: final.content }],
+      api: messages,
       display: [...conv.display, { role: 'user', text, at }, { role: 'assistant', text: reply, at: new Date().toISOString() }],
     });
     return reply;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchDigest, fetchStatus, type Digest, type ServerStatus } from './api';
 import { useNewsroom } from './hooks/useNewsroom';
+import { useReminders } from './hooks/useReminders';
 import { NewsTicker } from './components/NewsTicker';
 import { DigestPoster } from './components/DigestPoster';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
@@ -53,14 +54,48 @@ export default function App() {
     if (newsroom.digests?.generating) s.add('echo');
     return s;
   }, [busy, newsroom.digests?.generating]);
-  const busyLabels = useMemo<Record<string, string>>(
-    () => {
-      const labels: Record<string, string> = {};
-      if (newsroom.digests?.generating) labels.echo = '📰 Píšu plakátek…';
-      return labels;
-    },
-    [newsroom.digests?.generating],
-  );
+  // co agent právě dělá v chatu (např. „Dívám se do kalendáře…“) – ukáže se v bublině nad robotem
+  const [activity, setActivity] = useState<Record<string, string>>({});
+  const onActivity = useCallback((agentId: string, label: string | null) => {
+    setActivity((prev) => {
+      const next = { ...prev };
+      if (label) next[agentId] = label;
+      else delete next[agentId];
+      return next;
+    });
+  }, []);
+  const busyLabels = useMemo<Record<string, string>>(() => {
+    const labels: Record<string, string> = { ...activity };
+    if (newsroom.digests?.generating) labels.echo = '📰 Píšu plakátek…';
+    return labels;
+  }, [activity, newsroom.digests?.generating]);
+
+  // --- Chronos: návrat z přihlášení Googlu (?kalendar=ok / chyba) ---
+  const [calendarNotice, setCalendarNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [initialTab, setInitialTab] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const k = params.get('kalendar');
+    if (!k) return;
+    setCalendarNotice(
+      k === 'ok'
+        ? { ok: true, text: '✓ Google Kalendář je propojený. Chronos teď vidí tvůj kalendář – zkus mu napsat „Co mám zítra?“.' }
+        : { ok: false, text: params.get('zprava') ?? 'Propojení s Googlem se nepovedlo.' },
+    );
+    setInitialTab('kalendar');
+    setSelectedId('chronos');
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
+
+  useEffect(() => {
+    if (selectedId !== 'chronos' && initialTab) {
+      setInitialTab(null);
+      setCalendarNotice(null);
+    }
+  }, [selectedId, initialTab]);
+
+  // --- Chronos: připomínky 10 minut před událostí ---
+  const { reminders, dismiss } = useReminders(serverOnline && !!status?.google?.connected);
 
   const [poster, setPoster] = useState<Digest | null>(null);
   const autoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,6 +189,27 @@ export default function App() {
           <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={allBusy} busyLabels={busyLabels} />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {poster && <DigestPoster digest={poster} onClose={closePoster} />}
+          {reminders.length > 0 && (
+            <div className="reminders" role="status">
+              {reminders.map((r) => (
+                <div key={r.id} className="reminder">
+                  <span className="reminder-icon">⏰</span>
+                  <button className="reminder-body" onClick={() => setSelectedId('chronos')}>
+                    <strong>
+                      Za {r.minutes} min: {r.summary}
+                    </strong>
+                    <span>
+                      {r.start.slice(11, 16)}
+                      {r.location ? ` · ${r.location}` : ''}
+                    </span>
+                  </button>
+                  <button className="reminder-close" onClick={() => dismiss(r.id)} aria-label="Zavřít připomínku">
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <NewsTicker newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={() => openPoster()} onOpenEcho={() => setSelectedId('echo')} />
         <AgentPanel
@@ -165,6 +221,9 @@ export default function App() {
           onBusyChange={setAgentBusy}
           newsroom={newsroom}
           onOpenPoster={openPoster}
+          onActivity={onActivity}
+          calendarNotice={selectedId === 'chronos' ? calendarNotice : null}
+          initialTab={selectedId === 'chronos' ? initialTab : null}
         />
       </main>
     </div>

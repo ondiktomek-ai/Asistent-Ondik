@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactElement } from 'react';
 import { ApiError, clearHistory, fetchHistory, sendMessage, setToken, type ChatMessage, type ServerStatus } from '../api';
 import type { AgentDef } from '../world/types';
 
@@ -7,49 +7,70 @@ interface ChatProps {
   status: ServerStatus | null;
   onStatusChange: () => void;
   onBusyChange: (busy: boolean) => void;
+  /** Co agent právě dělá (např. „Dívám se do kalendáře…“), null = nic. */
+  onActivity?: (label: string | null) => void;
 }
 
 /** Zobrazení textu odpovědi: odstavce, odrážky a **tučné**. Bez HTML z modelu. */
 function RichText({ text }: { text: string }) {
-  const blocks = text.split(/\n{2,}/);
-  const inline = (s: string, key: number) =>
-    s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+  const inline = (str: string, key: string) =>
+    str.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
       part.startsWith('**') && part.endsWith('**') ? <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong> : <span key={`${key}-${i}`}>{part}</span>,
     );
-  return (
-    <>
-      {blocks.map((b, i) => {
-        const lines = b.split('\n');
-        if (lines.every((l) => /^\s*[-•*] /.test(l))) {
-          return (
-            <ul key={i}>
-              {lines.map((l, j) => (
-                <li key={j}>{inline(l.replace(/^\s*[-•*] /, ''), j)}</li>
-              ))}
-            </ul>
-          );
-        }
-        return (
-          <p key={i}>
-            {lines.map((l, j) => (
+  const isBullet = (l: string) => /^\s*[-•*] /.test(l);
+  const out: ReactElement[] = [];
+  text.split(/\n{2,}/).forEach((block, bi) => {
+    // v rámci odstavce seskupíme po sobě jdoucí odrážky do seznamu
+    let para: string[] = [];
+    let list: string[] = [];
+    const flushPara = () => {
+      if (para.length)
+        out.push(
+          <p key={`p${bi}-${out.length}`}>
+            {para.map((l, j) => (
               <span key={j}>
                 {j > 0 && <br />}
-                {inline(l, j)}
+                {inline(l, `${bi}-${j}`)}
               </span>
             ))}
-          </p>
+          </p>,
         );
-      })}
-    </>
-  );
+      para = [];
+    };
+    const flushList = () => {
+      if (list.length)
+        out.push(
+          <ul key={`u${bi}-${out.length}`}>
+            {list.map((l, j) => (
+              <li key={j}>{inline(l.replace(/^\s*[-•*] /, ''), `${bi}-l${j}`)}</li>
+            ))}
+          </ul>,
+        );
+      list = [];
+    };
+    for (const line of block.split('\n')) {
+      if (isBullet(line)) {
+        flushPara();
+        list.push(line);
+      } else {
+        flushList();
+        para.push(line);
+      }
+    }
+    flushPara();
+    flushList();
+  });
+  return <>{out}</>;
 }
 
 const CHAT_HINTS: Record<string, string> = {
   ondik: 'Napiš, s čím potřebuješ pomoct. Třeba „Co bys mi dnes doporučil udělat jako první?“',
+  chronos: 'Napiš, co potřebuješ. Třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“ nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“.',
   echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
 };
 
-export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps) {
+export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity }: ChatProps) {
+  const [activity, setActivity] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -87,10 +108,21 @@ export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps)
     abortRef.current = abort;
     let reply = '';
     try {
-      await sendMessage(agent.id, text, (t) => {
-        reply += t;
-        setStreaming(reply);
-      }, abort.signal);
+      await sendMessage(
+        agent.id,
+        text,
+        (t) => {
+          reply += t;
+          setStreaming(reply);
+          setActivity(null);
+          onActivity?.(null);
+        },
+        abort.signal,
+        (label) => {
+          setActivity(label);
+          onActivity?.(label);
+        },
+      );
       setMessages((m) => [...m, { role: 'assistant', text: reply, at: new Date().toISOString() }]);
     } catch (err) {
       if (abort.signal.aborted) return;
@@ -100,6 +132,8 @@ export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps)
       if (err instanceof ApiError && err.status === 401) onStatusChange();
     } finally {
       setStreaming(null);
+      setActivity(null);
+      onActivity?.(null);
       onBusyChange(false);
     }
   }
@@ -170,7 +204,10 @@ export function Chat({ agent, status, onStatusChange, onBusyChange }: ChatProps)
           </div>
         ))}
         {streaming !== null && (
-          <div className="msg msg-assistant">{streaming ? <RichText text={streaming} /> : <span className="typing">Přemýšlí…</span>}</div>
+          <div className="msg msg-assistant">
+            {streaming && <RichText text={streaming} />}
+            {(activity || !streaming) && <span className="typing">{activity ?? 'Přemýšlí…'}</span>}
+          </div>
         )}
       </div>
       {error && <div className="chat-error">{error}</div>}

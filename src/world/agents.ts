@@ -83,10 +83,11 @@ export const AGENTS: AgentDef[] = [
     color: '#ff8a3d',
     theme: 'calendar',
     status: 'setup',
-    description: 'Spravuje kalendář, hledá volné termíny, plánuje schůzky a připomíná, co tě čeká.',
-    duties: ['Plánování schůzek', 'Hledání volných termínů', 'Připomínky událostí', 'Ochrana času na soustředění'],
-    tools: [{ name: 'Google Kalendář', description: 'Čtení, vytváření a úpravy událostí', status: 'planned' }],
-    idleLines: ['V 10:00 máš schůzku.', 'Zítra je volno!', 'Hlídám čas.', 'Tik tak…'],
+    description:
+      'Spravuje tvůj Google Kalendář: řekne ti, co tě čeká, najde volný termín, zapíše, přesune nebo smaže událost a 10 minut předem ti připomene, co začíná.',
+    duties: ['Přehled, co tě čeká', 'Hledání volných termínů (8:00–20:00)', 'Zakládání, přesouvání a mazání událostí', 'Připomínky 10 minut předem'],
+    tools: [{ name: 'Google Kalendář', description: 'Hlavní kalendář: čtení, volné termíny, zápis, úpravy, mazání', status: 'connected' }],
+    idleLines: ['Hlídám čas.', 'Tik tak…', 'Co naplánujeme?', 'Kalendář je v cajku.'],
   },
   {
     id: 'lexa',

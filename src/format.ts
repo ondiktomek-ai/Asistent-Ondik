@@ -37,3 +37,22 @@ export function localHour(t: string): string {
 export const deg = (n: number) => `${Math.round(n)} °C`;
 
 export const SCOPE_LABEL = { svet: 'Svět', cesko: 'Česko', region: 'Region' } as const;
+
+/** Posun pražského času proti UTC v minutách (60 v zimě, 120 v létě). */
+function pragueOffset(at: Date): number {
+  const name = new Intl.DateTimeFormat('en-US', { timeZone: TZ, timeZoneName: 'longOffset' })
+    .formatToParts(at)
+    .find((p) => p.type === 'timeZoneName')?.value;
+  const m = name?.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  if (!m) return 60;
+  return (m[1] === '-' ? -1 : 1) * (+m[2] * 60 + +(m[3] ?? 0));
+}
+
+/** „2026-11-25T14:30“ v pražském čase → milisekundy (nezávisle na zóně prohlížeče). */
+export function pragueMs(local: string): number {
+  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) return NaN;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0));
+  const first = guess - pragueOffset(new Date(guess)) * 60_000;
+  return guess - pragueOffset(new Date(first)) * 60_000;
+}

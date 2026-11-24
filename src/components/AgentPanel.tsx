@@ -5,6 +5,13 @@ import { Chat } from './Chat';
 import type { ServerStatus } from '../api';
 import type { Newsroom } from '../hooks/useNewsroom';
 import { ReporterPanel } from './ReporterPanel';
+import { CalendarPanel } from './CalendarPanel';
+
+/** Agenti s druhou záložkou vedle chatu. */
+const SIDE_TABS: Record<string, { id: string; label: string }> = {
+  echo: { id: 'zpravy', label: '📰 Zprávy a počasí' },
+  chronos: { id: 'kalendar', label: '📅 Kalendář' },
+};
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
   setup: 'Čeká na nastavení',
@@ -22,15 +29,40 @@ interface AgentPanelProps {
   onBusyChange: (agentId: string, busy: boolean) => void;
   newsroom: Newsroom;
   onOpenPoster: (id?: string) => void;
+  onActivity: (agentId: string, label: string | null) => void;
+  /** Výsledek přihlášení ke Googlu (po návratu z Googlu). */
+  calendarNotice: { ok: boolean; text: string } | null;
+  /** Požadovaná záložka (např. po návratu z Googlu otevřít Kalendář). */
+  initialTab?: string | null;
 }
 
-export function AgentPanel({ agent, vacant = false, status, onClose, onStatusChange, onBusyChange, newsroom, onOpenPoster }: AgentPanelProps) {
-  const [echoTab, setEchoTab] = useState<'chat' | 'zpravy'>('chat');
+export function AgentPanel({
+  agent,
+  vacant = false,
+  status,
+  onClose,
+  onStatusChange,
+  onBusyChange,
+  newsroom,
+  onOpenPoster,
+  onActivity,
+  calendarNotice,
+  initialTab,
+}: AgentPanelProps) {
+  const [tab, setTab] = useState<string>(initialTab ?? 'chat');
+  const [tabAgent, setTabAgent] = useState<string | null>(agent?.id ?? null);
+  // při přepnutí na jiného agenta začni chatem (pokud není řečeno jinak)
+  if ((agent?.id ?? null) !== tabAgent) {
+    setTabAgent(agent?.id ?? null);
+    setTab(initialTab ?? 'chat');
+  }
+  const sideTab = agent ? SIDE_TABS[agent.id] : undefined;
+  const googleOk = !!status?.google?.connected;
   const open = !!agent || vacant;
   const connected = !!agent && !!status?.connectedAgents.includes(agent.id);
   const chatCapable = !!agent && (connected || agent.id === 'ondik');
   const serverOnline = !!status && (!status.authRequired || status.authorized);
-  const isReporter = agent?.id === 'echo';
+
   const details = agent && (
     <>
           <p className="panel-desc">{agent.description}</p>
@@ -53,7 +85,10 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
                     <strong>{t.name}</strong>
                     <span>{t.description}</span>
                   </div>
-                  <span className={`badge badge-${t.status}`}>{t.status === 'connected' ? 'Připojeno' : 'Plánováno'}</span>
+                  {(() => {
+                    const st = agent.id === 'chronos' ? (googleOk ? 'connected' : 'planned') : t.status;
+                    return <span className={`badge badge-${st}`}>{st === 'connected' ? 'Připojeno' : agent.id === 'chronos' ? 'Nepropojeno' : 'Plánováno'}</span>;
+                  })()}
                 </li>
               ))}
             </ul>
@@ -62,11 +97,13 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
   );
   const active = !!agent && !!status?.activeAgents?.includes(agent.id);
   const agentStatus: AgentStatus | undefined = agent
-    ? isReporter && newsroom.digests?.generating
+    ? agent.id === 'echo' && newsroom.digests?.generating
       ? 'working'
-      : (connected && status?.ready) || active
-        ? 'idle'
-        : agent.status
+      : agent.id === 'chronos' && !googleOk
+        ? 'setup'
+        : (connected && status?.ready) || active
+          ? 'idle'
+          : agent.status
     : undefined;
   return (
     <aside className={`panel${open ? ' open' : ''}`} aria-hidden={!open}>
@@ -109,21 +146,30 @@ export function AgentPanel({ agent, vacant = false, status, onClose, onStatusCha
             </div>
           </header>
 
-          {isReporter ? (
+          {sideTab ? (
             <>
               <div className="tabs" role="tablist">
-                <button role="tab" aria-selected={echoTab === 'chat'} className={echoTab === 'chat' ? 'active' : ''} onClick={() => setEchoTab('chat')}>
+                <button role="tab" aria-selected={tab === 'chat'} className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')}>
                   💬 Chat
                 </button>
-                <button role="tab" aria-selected={echoTab === 'zpravy'} className={echoTab === 'zpravy' ? 'active' : ''} onClick={() => setEchoTab('zpravy')}>
-                  📰 Zprávy a počasí
+                <button role="tab" aria-selected={tab === sideTab.id} className={tab === sideTab.id ? 'active' : ''} onClick={() => setTab(sideTab.id)}>
+                  {sideTab.label}
                 </button>
               </div>
               <section className="chat-section">
-                {echoTab === 'chat' ? (
-                  <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />
-                ) : (
+                {tab === 'chat' ? (
+                  <Chat
+                    key={agent.id}
+                    agent={agent}
+                    status={status}
+                    onStatusChange={onStatusChange}
+                    onBusyChange={(b) => onBusyChange(agent.id, b)}
+                    onActivity={(l) => onActivity(agent.id, l)}
+                  />
+                ) : agent.id === 'echo' ? (
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                ) : (
+                  <CalendarPanel serverOnline={serverOnline} notice={calendarNotice} onStatusChange={onStatusChange} />
                 )}
               </section>
               <details className="about">
