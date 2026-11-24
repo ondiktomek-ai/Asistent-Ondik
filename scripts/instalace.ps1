@@ -5,6 +5,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
+. (Join-Path $PSScriptRoot 'spolecne.ps1')
 $Host.UI.RawUI.WindowTitle = 'Městečko Ondik – instalace'
 
 function Krok($text) { Write-Host ''; Write-Host "> $text" -ForegroundColor Yellow }
@@ -49,6 +50,7 @@ Ok "Node.js $(& node -v)"
 Krok 'Stahuji knihovny (poprvé to může trvat pár minut)'
 & npm install --no-fund --no-audit
 if ($LASTEXITCODE -ne 0) { Konec 'npm install selhal – zkontroluj připojení k internetu a zkus to znovu.' }
+Zapis-Otisk (Join-Path $Root 'node_modules\.otisk-knihoven') (Otisk-Knihoven $Root)
 Ok 'Knihovny jsou připravené'
 
 # 3) Nastavení (.env) --------------------------------------------------------
@@ -112,6 +114,7 @@ if ($obsah -notmatch '(?m)^\s*OKNO_POZICE\s*=') {
 Krok 'Sestavuji městečko'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Konec 'Sestavení selhalo – pošli mi prosím text chyby výše.' }
+Zapis-Otisk (Join-Path $Root 'dist\.otisk') (Otisk-Zdroju $Root)
 Ok 'Hotovo'
 
 # 6) Zástupce na ploše -------------------------------------------------------

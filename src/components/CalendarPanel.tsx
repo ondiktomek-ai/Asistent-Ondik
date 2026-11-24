@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { disconnectGoogle, fetchAgenda, fetchGoogleStatus, saveGoogleClient, startGoogleAuth, type CalEvent, type GoogleStatus } from '../api';
+import { ApiError, disconnectGoogle, fetchAgenda, fetchGoogleStatus, saveGoogleClient, startGoogleAuth, type CalEvent, type GoogleStatus } from '../api';
 import { dayName } from '../format';
 
 interface CalendarPanelProps {
@@ -140,7 +140,13 @@ export function CalendarPanel({ serverOnline, notice, onStatusChange }: Calendar
         setEvents(a.events);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nepodařilo se načíst kalendář.');
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? 'Běží ještě starší verze serveru. Zavři okno „Mestecko Ondik - server“ na liště a spusť městečko znovu ikonou na ploše.'
+          : err instanceof Error
+            ? err.message
+            : 'Nepodařilo se načíst kalendář.',
+      );
     }
   }, []);
 
@@ -185,7 +191,7 @@ export function CalendarPanel({ serverOnline, notice, onStatusChange }: Calendar
       {notice && <div className={notice.ok ? 'notice-ok' : 'chat-error'}>{notice.text}</div>}
       {error && <div className="chat-error">{error}</div>}
       {!st ? (
-        <p className="hint">Načítám…</p>
+        !error && <p className="hint">Načítám…</p>
       ) : !st.configured ? (
         <Setup onSaved={() => void load()} />
       ) : !st.connected ? (

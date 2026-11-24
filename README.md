@@ -41,7 +41,9 @@ Pokud se instalace zeptá na „neznámého vydavatele“, zvol *Další informa
 
 ### Aktualizace
 Stáhni nový ZIP, rozbal ho **přes původní složku** (nastavení `.env` a historie chatu v `data/`
-zůstanou) a znovu spusť instalaci – nastavení nepřepíše a jen všechno znovu sestaví.
+zůstanou) a klikni na ikonu na ploše. Ikona sama pozná novou verzi: doinstaluje knihovny,
+sestaví ji (okno serveru bude chvíli vidět) a restartuje běžící server.
+Když se instalace po rozbalení ptá znovu na API klíč, rozbalil jsi ZIP do jiné složky.
 
 ### Ruční spuštění (pro pokročilé)
 ```bash
