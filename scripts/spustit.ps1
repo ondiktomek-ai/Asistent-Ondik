@@ -21,10 +21,22 @@ if (Test-Path '.env') {
   }
 }
 $port = if ($nastaveni['PORT']) { $nastaveni['PORT'] } else { '8787' }
-$url = "http://localhost:$port"
+# 127.0.0.1 místo „localhost“ – Windows by jinak zkoušel nejdřív IPv6 (::1), kde server neposlouchá.
+$url = "http://127.0.0.1:$port"
 
+# Běží server? Zkusíme se připojit na port (bez HTTP, aby do toho nemohla vstoupit proxy ani antivir).
 function Bezi {
-  try { return (Invoke-WebRequest -Uri "$url/api/status" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { return $false }
+  $c = New-Object System.Net.Sockets.TcpClient
+  try {
+    $pokus = $c.BeginConnect('127.0.0.1', [int]$port, $null, $null)
+    if (-not $pokus.AsyncWaitHandle.WaitOne(1000)) { return $false }
+    $c.EndConnect($pokus)
+    return $true
+  } catch {
+    return $false
+  } finally {
+    $c.Close()
+  }
 }
 
 if (-not (Bezi)) {
@@ -32,17 +44,17 @@ if (-not (Bezi)) {
     Zprava 'Městečko ještě není nainstalované. Ve složce projektu spusť „Nainstalovat-Windows.bat“.'
     exit 1
   }
-  Start-Process -FilePath 'cmd.exe' -WorkingDirectory $Root -WindowStyle Minimized `
+  $server = Start-Process -FilePath 'cmd.exe' -WorkingDirectory $Root -WindowStyle Minimized -PassThru `
     -ArgumentList '/c', 'title Mestecko Ondik - server (zavrenim tohoto okna mestecko vypnes) & npm run serve & pause'
-  $nahozeno = $false
   for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Milliseconds 500
-    if (Bezi) { $nahozeno = $true; break }
+    if (Bezi) { break }
+    if ($server.HasExited) {
+      Zprava 'Server městečka se nepodařilo spustit. Spusť znovu „Nainstalovat-Windows.bat“ a kdyžtak pošli text chyby.'
+      exit 1
+    }
   }
-  if (-not $nahozeno) {
-    Zprava 'Server městečka se nepodařilo spustit. Otevři minimalizované okno „Mestecko Ondik - server“ na liště a podívej se, co píše.'
-    exit 1
-  }
+  # I kdyby kontrola nic nenašla, server běží (okno je otevřené) – okno městečka otevřeme tak jako tak.
 }
 
 # Okno městečka

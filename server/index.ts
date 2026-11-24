@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, stat } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
+import { networkInterfaces } from 'node:os';
 import Anthropic from '@anthropic-ai/sdk';
 import { MODEL, apiKeyConfigured, chatWithOndik, clearHistory, getHistory, isBusy } from './ondik.ts';
 
@@ -142,6 +143,14 @@ async function serveStatic(res: ServerResponse, url: URL) {
   }
 }
 
+/** IPv4 adresy počítače v síti (Wi-Fi, kabel, Tailscale). */
+function lanAddresses(): string[] {
+  return Object.values(networkInterfaces())
+    .flat()
+    .filter((a) => a && a.family === 'IPv4' && !a.internal)
+    .map((a) => a!.address);
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   try {
@@ -158,5 +167,9 @@ server.listen(PORT, HOST, () => {
   console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
   if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');
-  else console.log(`📱 Přístup ze sítě je zapnutý (port ${PORT}), chráněný heslem.`);
+  else {
+    console.log(`📱 Přístup ze sítě je zapnutý (port ${PORT}), chráněný heslem. V telefonu otevři:`);
+    for (const addr of lanAddresses()) console.log(`     http://${addr}:${PORT}`);
+    console.log('     (doma na stejné Wi-Fi; odkudkoli přes Tailscale – adresa začíná 100.)');
+  }
 });
