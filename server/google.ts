@@ -25,7 +25,12 @@ interface GoogleToken {
   expires_at: number;
   email: string | null;
   scope: string;
+  /** Kdy ses přihlásil (v testovacím režimu Googlu platí přihlášení 7 dní). */
+  obtained_at?: number;
 }
+
+/** Jak dlouho platí přihlášení u aplikace v testovacím režimu Googlu. */
+export const GOOGLE_LOGIN_DAYS = Number(process.env.GOOGLE_PRIHLASENI_DNI || 7);
 
 async function loadClient(): Promise<GoogleClient | null> {
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -60,7 +65,14 @@ export async function saveClient(clientId: string, clientSecret: string) {
 
 export async function googleStatus() {
   const [client, tok] = await Promise.all([loadClient(), loadToken()]);
-  return { configured: !!client, connected: !!tok?.refresh_token, email: tok?.email ?? null };
+  const connected = !!tok?.refresh_token;
+  // Starší přihlášení nemají datum – počítáme od chvíle, kdy jsme si toho všimli.
+  if (connected && tok && !tok.obtained_at) {
+    tok.obtained_at = Date.now();
+    await saveSecret(TOKEN_FILE, tok);
+  }
+  const loginExpires = connected && tok?.obtained_at && GOOGLE_LOGIN_DAYS > 0 ? tok.obtained_at + GOOGLE_LOGIN_DAYS * 86_400_000 : null;
+  return { configured: !!client, connected, email: tok?.email ?? null, loginExpires };
 }
 
 // ---------------------------------------------------------------- OAuth
@@ -111,7 +123,7 @@ export async function finishAuth(code: string, state: string, redirectUri: strin
     grant_type: 'authorization_code',
   });
   if (!j.refresh_token) throw new Error('Google nevrátil trvalé přihlášení. Odeber městečku přístup v účtu Google a zkus to znovu.');
-  token = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (j.expires_in ?? 3600) * 1000, email: null, scope: j.scope ?? '' };
+  token = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (j.expires_in ?? 3600) * 1000, email: null, scope: j.scope ?? '', obtained_at: Date.now() };
   await saveSecret(TOKEN_FILE, token);
   // e-mail účtu = ID hlavního kalendáře
   try {

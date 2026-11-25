@@ -61,6 +61,7 @@ interface Brain extends RobotBrain {
   face: V2 | null;
   bubbleUntil: number;
   nextChatter: number;
+  nextNote: number;
   carryUntil: number;
   onArrive: (() => void) | null;
   afterWait: (() => void) | null;
@@ -70,6 +71,8 @@ interface Brain extends RobotBrain {
 interface Ctx {
   night: boolean;
   busy: Set<string>;
+  /** Co má robot občas připomenout. */
+  notes: Record<string, string>;
 }
 
 class TownSim {
@@ -111,6 +114,7 @@ class TownSim {
       face: null,
       bubbleUntil: 0,
       nextChatter: rand(5, 20),
+      nextNote: 3,
       carryUntil: 0,
       onArrive: null,
       afterWait: null,
@@ -420,6 +424,13 @@ class TownSim {
 
       if (b.inMeeting) continue;
 
+      // připomínka (např. Bit: přihlášení ke Googlu) – přednost před běžným povídáním
+      const note = ctx.notes[b.id];
+      if (note && !b.bubble && !ctx.busy.has(b.id) && this.t > b.nextNote) {
+        this.say(b, note, 6);
+        b.nextNote = this.t + 25;
+      }
+
       // povídání při práci
       if (!ctx.busy.has(b.id) && !b.bubble && b.loc.kind === 'home' && !ctx.night) {
         b.nextChatter -= dt;
@@ -460,16 +471,17 @@ interface TownLifeProps {
   meetingId: number;
   onMeetingEnd: () => void;
   onSelect: (id: string) => void;
+  notes?: Record<string, string>;
 }
 
-export function TownLife({ night, busy, busyLabels, meetingId, onMeetingEnd, onSelect }: TownLifeProps) {
+export function TownLife({ night, busy, busyLabels, meetingId, onMeetingEnd, onSelect, notes = {} }: TownLifeProps) {
   const sim = useMemo(() => new TownSim(), []);
   // ladění: s ?ladeni v adrese je simulace dostupná v konzoli jako window.mestecko
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('ladeni')) (window as unknown as { mestecko: TownSim }).mestecko = sim;
   }, [sim]);
-  const ctx = useRef<Ctx>({ night, busy });
-  ctx.current = { night, busy };
+  const ctx = useRef<Ctx>({ night, busy, notes });
+  ctx.current = { night, busy, notes };
   const endRef = useRef(onMeetingEnd);
   endRef.current = onMeetingEnd;
 

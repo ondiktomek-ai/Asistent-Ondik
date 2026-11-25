@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchDigest, fetchStatus, type Digest, type ServerStatus } from './api';
+import { fetchBitStatus, fetchDigest, fetchStatus, startGoogleAuth, type BitAlert, type Digest, type ServerStatus } from './api';
 import { useNewsroom } from './hooks/useNewsroom';
 import { useReminders } from './hooks/useReminders';
 import { NewsTicker } from './components/NewsTicker';
@@ -105,6 +105,54 @@ export default function App() {
     }
   }, [selectedId, initialTab]);
 
+  // --- Bit: upozornění (např. přihlášení ke Googlu) ---
+  const [bitAlerts, setBitAlerts] = useState<BitAlert[]>([]);
+  const [snoozed, setSnoozed] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bit-odlozeno') ?? '{}') as Record<string, number>;
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    if (!serverOnline) return;
+    const load = () =>
+      fetchBitStatus()
+        .then((r) => setBitAlerts(r.alerts))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 5 * 60_000);
+    return () => clearInterval(t);
+  }, [serverOnline, calendarNotice]);
+  const visibleAlerts = bitAlerts.filter((a) => !(snoozed[a.id] > Date.now()));
+  const snooze = (id: string) => {
+    const next = { ...snoozed, [id]: Date.now() + 6 * 3600_000 };
+    setSnoozed(next);
+    try {
+      localStorage.setItem('bit-odlozeno', JSON.stringify(next));
+    } catch {
+      // nevadí
+    }
+  };
+  const googleLogin = useCallback(() => {
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    const openPanel = () => {
+      setInitialTab('kalendar');
+      setSelectedId('chronos');
+    };
+    if (!local) return openPanel();
+    startGoogleAuth()
+      .then(({ url }) => {
+        window.location.href = url;
+      })
+      .catch(openPanel);
+  }, []);
+  const robotNotes = useMemo(() => {
+    const notes: Record<string, string> = {};
+    if (bitAlerts.length) notes.bit = bitAlerts[0].text;
+    return notes;
+  }, [bitAlerts]);
+
   // --- Chronos: připomínky 10 minut před událostí ---
   const { reminders, dismiss } = useReminders(serverOnline && !!status?.google?.connected);
 
@@ -206,11 +254,29 @@ export default function App() {
             meetingId={meetingId}
             meetingActive={meetingActive}
             onMeetingEnd={endMeeting}
+            robotNotes={robotNotes}
           />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {poster && <DigestPoster digest={poster} onClose={closePoster} />}
-          {reminders.length > 0 && (
+          {(reminders.length > 0 || visibleAlerts.length > 0) && (
             <div className="reminders" role="status">
+              {visibleAlerts.map((a) => (
+                <div key={a.id} className="reminder bit-alert">
+                  <span className="reminder-icon">🔧</span>
+                  <button className="reminder-body" onClick={() => setSelectedId('bit')}>
+                    <strong>Bit: {a.text}</strong>
+                    <span>Klikni pro podrobnosti</span>
+                  </button>
+                  {a.action === 'google-login' && (
+                    <button className="reminder-action" onClick={googleLogin}>
+                      Přihlásit
+                    </button>
+                  )}
+                  <button className="reminder-close" onClick={() => snooze(a.id)} aria-label="Připomenout později" title="Připomenout za 6 hodin">
+                    ×
+                  </button>
+                </div>
+              ))}
               {reminders.map((r) => (
                 <div key={r.id} className="reminder">
                   <span className="reminder-icon">⏰</span>
@@ -244,6 +310,7 @@ export default function App() {
           onActivity={onActivity}
           calendarNotice={selectedId === 'chronos' ? calendarNotice : null}
           initialTab={selectedId === 'chronos' ? initialTab : null}
+          onGoogleLogin={googleLogin}
         />
       </main>
     </div>

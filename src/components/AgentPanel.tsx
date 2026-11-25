@@ -6,11 +6,13 @@ import type { ServerStatus } from '../api';
 import type { Newsroom } from '../hooks/useNewsroom';
 import { ReporterPanel } from './ReporterPanel';
 import { CalendarPanel } from './CalendarPanel';
+import { MaintenancePanel } from './MaintenancePanel';
 
 /** Agenti s druhou záložkou vedle chatu. */
 const SIDE_TABS: Record<string, { id: string; label: string }> = {
   echo: { id: 'zpravy', label: '📰 Zprávy a počasí' },
   chronos: { id: 'kalendar', label: '📅 Kalendář' },
+  bit: { id: 'udrzba', label: '🔧 Údržba' },
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -34,6 +36,8 @@ interface AgentPanelProps {
   calendarNotice: { ok: boolean; text: string } | null;
   /** Požadovaná záložka (např. po návratu z Googlu otevřít Kalendář). */
   initialTab?: string | null;
+  /** Přihlásit se ke Googlu (z Bitova upozornění). */
+  onGoogleLogin: () => void;
 }
 
 export function AgentPanel({
@@ -48,6 +52,7 @@ export function AgentPanel({
   onActivity,
   calendarNotice,
   initialTab,
+  onGoogleLogin,
 }: AgentPanelProps) {
   const [tab, setTab] = useState<string>(initialTab ?? 'chat');
   const [tabAgent, setTabAgent] = useState<string | null>(agent?.id ?? null);
@@ -168,6 +173,8 @@ export function AgentPanel({
                   />
                 ) : agent.id === 'echo' ? (
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                ) : agent.id === 'bit' ? (
+                  <MaintenancePanel serverOnline={serverOnline} onGoogleLogin={onGoogleLogin} />
                 ) : (
                   <CalendarPanel serverOnline={serverOnline} notice={calendarNotice} onStatusChange={onStatusChange} />
                 )}

@@ -66,6 +66,7 @@ function RichText({ text }: { text: string }) {
 const CHAT_HINTS: Record<string, string> = {
   ondik: 'Napiš, s čím potřebuješ pomoct. Třeba „Co bys mi dnes doporučil udělat jako první?“',
   chronos: 'Napiš, co potřebuješ. Třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“ nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“.',
+  bit: 'Zeptej se „Běží všechno?“, nebo mi řekni nápad, co v městečku vylepšit – zapíšu si ho.',
   echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
 };
 

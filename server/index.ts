@@ -10,6 +10,7 @@ import { digestState, generateDigest, getDigest, latestNews, startReporter } fro
 import { getWeather } from './weather.ts';
 import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, saveClient } from './google.ts';
 import { agenda } from './calendar.ts';
+import { addIdea, deleteIdea, getReport, listIdeas, startMaintenance, updateIdea } from './bit.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const PASSWORD = process.env.OFFICE_PASSWORD ?? '';
@@ -20,7 +21,7 @@ const CONNECTED_AGENTS = new Set(Object.keys(CHAT_AGENTS));
 /** Kam Google po přihlášení vrací prohlížeč (klient typu „Desktop app“ povoluje loopback adresu). */
 const GOOGLE_REDIRECT = `http://127.0.0.1:${PORT}/api/google/callback`;
 /** Agenti, kteří pracují sami (bez chatu). */
-const ACTIVE_AGENTS = ['echo'];
+const ACTIVE_AGENTS = ['echo', 'bit'];
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -133,6 +134,33 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
       return json(res, 200, { connected: true, email: g.email, events: await agenda(days) });
     } catch (err) {
       return json(res, 502, { error: errorMessage(err) });
+    }
+  }
+
+  // --- Bit: údržba a nápady ---
+  if (url.pathname === '/api/bit/status') return json(res, 200, await getReport(url.searchParams.has('ted')));
+  if (url.pathname === '/api/bit/ideas') {
+    if (req.method === 'POST') {
+      try {
+        const body = (await readBody(req)) as { title?: string; detail?: string; priority?: string };
+        return json(res, 200, await addIdea({ title: String(body.title ?? ''), detail: body.detail, priority: body.priority, from: 'ty' }));
+      } catch (err) {
+        return json(res, 400, { error: errorMessage(err) });
+      }
+    }
+    return json(res, 200, { ideas: await listIdeas() });
+  }
+  const im = url.pathname.match(/^\/api\/bit\/ideas\/([a-z0-9-]+)$/);
+  if (im) {
+    try {
+      if (req.method === 'DELETE') {
+        await deleteIdea(im[1]);
+        return json(res, 200, { ok: true });
+      }
+      const body = (await readBody(req)) as { title?: string; detail?: string; status?: string; priority?: string };
+      return json(res, 200, await updateIdea(im[1], body));
+    } catch (err) {
+      return json(res, 400, { error: errorMessage(err) });
     }
   }
 
@@ -253,6 +281,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   if (process.env.ZPRAVY !== 'vypnuto') startReporter();
+  startMaintenance();
   console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
   if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');

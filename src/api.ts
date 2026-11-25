@@ -223,3 +223,49 @@ export const saveGoogleClient = (clientId: string, clientSecret: string) =>
 export const startGoogleAuth = () => request<{ url: string }>('/api/google/start', { method: 'POST' });
 export const disconnectGoogle = () => request<GoogleStatus>('/api/google/disconnect', { method: 'POST' });
 export const fetchAgenda = (days = 7) => request<{ connected: boolean; email?: string; events: CalEvent[] }>(`/api/calendar/agenda?days=${days}`);
+
+// ---------------------------------------------------------------- Bit (údržba a nápady)
+
+export type CheckState = 'ok' | 'warn' | 'error' | 'info';
+
+export interface BitCheck {
+  id: string;
+  name: string;
+  state: CheckState;
+  detail: string;
+  hint?: string;
+}
+
+export interface BitAlert {
+  id: string;
+  text: string;
+  action?: 'google-login';
+}
+
+export interface BitReport {
+  checkedAt: string;
+  checks: BitCheck[];
+  alerts: BitAlert[];
+}
+
+export type IdeaStatus = 'novy' | 'planovany' | 'hotovo' | 'zamitnuty';
+export type IdeaPriority = 'vysoka' | 'stredni' | 'nizka';
+
+export interface Idea {
+  id: string;
+  title: string;
+  detail: string;
+  from: 'ty' | 'bit';
+  status: IdeaStatus;
+  priority: IdeaPriority;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const jsonInit = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+export const fetchBitStatus = (now = false) => request<BitReport>(`/api/bit/status${now ? '?ted' : ''}`);
+export const fetchIdeas = () => request<{ ideas: Idea[] }>('/api/bit/ideas');
+export const addIdeaApi = (title: string, detail: string) => request<Idea>('/api/bit/ideas', jsonInit('POST', { title, detail }));
+export const updateIdeaApi = (id: string, patch: Partial<Pick<Idea, 'status' | 'priority' | 'title' | 'detail'>>) => request<Idea>(`/api/bit/ideas/${id}`, jsonInit('PATCH', patch));
+export const deleteIdeaApi = (id: string) => request<{ ok: true }>(`/api/bit/ideas/${id}`, { method: 'DELETE' });

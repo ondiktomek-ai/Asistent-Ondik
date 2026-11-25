@@ -126,19 +126,20 @@ export const AGENTS: AgentDef[] = [
   {
     id: 'bit',
     name: 'Bit',
-    role: 'Technický agent',
+    role: 'Technik a údržbář',
     roomName: 'Dílna',
     icon: '🔧',
     color: '#22c3c9',
     theme: 'workshop',
     status: 'setup',
-    description: 'Stará se o automatizace, skripty a technické věci – od GitHubu po napojení dalších služeb.',
-    duties: ['Automatizace opakovaných činností', 'Práce s kódem a GitHubem', 'Napojování nových nástrojů', 'Údržba systému'],
+    description:
+      'Hlídá, že v městečku všechno běží – API klíč, zprávy, plakátky, počasí i Google Kalendář. Připomene ti přihlášení ke Googlu a vede seznam nápadů, co v městečku vylepšit.',
+    duties: ['Kontrola městečka každých 15 minut', 'Připomínka přihlášení ke Googlu (jednou týdně)', 'Seznam nápadů na vylepšení', 'Rady, když něco nejde'],
     tools: [
-      { name: 'GitHub', description: 'Repozitáře, issues, pull requesty', status: 'planned' },
-      { name: 'Spouštění kódu', description: 'Skripty a automatizace', status: 'planned' },
+      { name: 'Kontrola systému', description: 'API klíč, zdroje zpráv, plakátky, počasí, Google, data, server', status: 'connected' },
+      { name: 'Seznam vylepšení', description: 'Tvoje nápady i jeho návrhy, s prioritou a stavem', status: 'connected' },
     ],
-    idleLines: ['Kompiluju…', 'Servery běží.', 'Kde je můj šroubovák?', '01001000 01101001'],
+    idleLines: ['Servery běží. 🔧', 'Kontroluju městečko…', 'Máš nápad? Zapíšu ho!', '01001000 01101001', 'Všechno v cajku.'],
   },
 ];
 

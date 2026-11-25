@@ -3,6 +3,7 @@ import { AGENTS } from '../src/world/agents.ts';
 import { loadConversation, saveConversation, type DisplayMessage } from './store.ts';
 import { apiKeyConfigured, nowText } from './config.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
+import { BIT_MODEL, BIT_SYSTEM, BIT_TOOLS, BIT_TOOL_LABELS, bitContext, runBitTool } from './bit-chat.ts';
 import { CHRONOS_MODEL, CHRONOS_SYSTEM, CHRONOS_TOOLS, TOOL_LABELS, chronosContext, runChronosTool } from './chronos-chat.ts';
 
 export { apiKeyConfigured };
@@ -97,6 +98,17 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
     tools: CHRONOS_TOOLS,
     runTool: runChronosTool,
     toolLabels: TOOL_LABELS,
+  },
+  bit: {
+    name: 'Bit',
+    model: BIT_MODEL,
+    system: BIT_SYSTEM,
+    effort: 'low',
+    fallbacks: false,
+    context: bitContext,
+    tools: BIT_TOOLS,
+    runTool: runBitTool,
+    toolLabels: BIT_TOOL_LABELS,
   },
   echo: {
     name: 'Echo',

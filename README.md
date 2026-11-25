@@ -84,6 +84,16 @@ každý řekne, jak na tom je, a pak se rozejdou. Když agent pracuje (chat, pla
 Logika je v `src/world3d/TownLife.tsx` (plánování činností a cest), geometrie cest a stánků
 v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí čas.
 
+## Bit – údržbář a správce nápadů
+
+- Každých **15 minut** zkontroluje městečko: Claude API klíč, Google Kalendář, zdroje zpráv,
+  plakátky, počasí, data a server. Výsledek je u Bita v záložce **🔧 Údržba**.
+- **Připomíná přihlášení ke Googlu**: aplikace je v testovacím režimu, přihlášení platí 7 dní.
+  Den předem se v městečku objeví upozornění s tlačítkem **Přihlásit** a Bit to říká i v bublině.
+- Vede **seznam nápadů na vylepšení** – zapíšeš je v záložce Údržba, nebo je řekneš Bitovi v chatu.
+  Bit sám navrhne další. Kód sám nemění – nápady pak předáš programátorovi (Claude Code).
+- Chat běží na **Claude Haiku 5.5** (`BIT_MODEL` v `.env`).
+
 ## Echo – zpravodaj
 
 - Každých **10 minut** projde zpravodajské weby (RSS) a nové zprávy pošle do **pásu vpravo**
@@ -121,7 +131,7 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 | 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
 | 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
-| 🔧 Dílna    | Bit     | Automatizace, kód, GitHub                      | plánováno |
+| 🔧 Dílna    | Bit     | Údržba: kontroly, připomínky, nápady na vylepšení | ✅ běží |
 | ＋ Volný box | –      | Místo pro budoucího agenta                     |      |
 
 ## Struktura
