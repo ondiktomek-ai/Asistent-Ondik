@@ -87,11 +87,13 @@ export async function sendMessage(
   signal?: AbortSignal,
   onTool?: (label: string) => void,
   onAttachment?: (a: ChatAttachment) => void,
+  /** hlasový rozhovor s Jarvisem (krátké odpovědi k přečtení nahlas) */
+  voice?: { briefingId?: string },
 ): Promise<void> {
   const res = await fetch(`/api/chat/${agentId}`, {
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(voice ? { text, voice: true, briefingId: voice.briefingId } : { text }),
     signal,
   });
   if (!res.ok || !res.body) {
@@ -334,3 +336,25 @@ export const fetchTeam = (all = false) => request<{ active: TeamTask[]; log: Tea
 export const fetchMemory = () => request<{ items: MemoryItem[] }>('/api/memory');
 export const addMemoryApi = (text: string, kind: MemoryKind) => request<MemoryItem>('/api/memory', jsonInit('POST', { text, kind }));
 export const deleteMemoryApi = (id: string) => request<{ ok: boolean }>(`/api/memory/${id}`, { method: 'DELETE' });
+
+// --- Jarvis ---
+
+export type SegmentKind = 'uvod' | 'pocasi' | 'svet' | 'cesko' | 'region' | 'program' | 'tym' | 'otazka';
+
+export interface BriefingSegment {
+  kind: SegmentKind;
+  text: string;
+  say: string;
+  items: { title: string; source: string; link: string }[];
+}
+
+export interface Briefing {
+  id: string;
+  createdAt: string;
+  segments: BriefingSegment[];
+  weather: { temp: number; text: string; icon: string; min?: number; max?: number } | null;
+  events: { start: string; summary: string; allDay: boolean; location?: string }[];
+  calendarConnected: boolean;
+}
+
+export const createBriefing = () => request<Briefing>('/api/jarvis/briefing', { method: 'POST' });

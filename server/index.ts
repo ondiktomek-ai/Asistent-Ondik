@@ -12,6 +12,7 @@ import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, save
 import { agenda } from './calendar.ts';
 import { deletePoster, getPoster, listPosters } from './lexa.ts';
 import { getSpend } from './usage.ts';
+import { createBriefing, voiceContext } from './jarvis.ts';
 import { activeTasks, addMemory, deleteMemory, listMemory, teamLog, type MemoryKind } from './team.ts';
 import { addIdea, deleteIdea, getReport, listIdeas, startMaintenance, updateIdea } from './bit.ts';
 
@@ -152,6 +153,17 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     return p ? json(res, 200, p) : json(res, 404, { error: 'Plakátek nenalezen.' });
   }
 
+  // --- Jarvis: mluvené hlášení ---
+  if (url.pathname === '/api/jarvis/briefing' && req.method === 'POST') {
+    if (!apiKeyConfigured()) return json(res, 503, { error: 'Chybí ANTHROPIC_API_KEY v souboru .env.' });
+    try {
+      return json(res, 200, await createBriefing());
+    } catch (err) {
+      console.error('[jarvis]', err);
+      return json(res, 500, { error: errorMessage(err) });
+    }
+  }
+
   // --- Tým: útrata, společná paměť, spolupráce ---
   if (url.pathname === '/api/usage') return json(res, 200, await getSpend());
   if (url.pathname === '/api/team') return json(res, 200, { active: activeTasks(), log: await teamLog(url.searchParams.has('vse') ? 60 : 15) });
@@ -237,9 +249,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
 
   if (!apiKeyConfigured()) return json(res, 503, { error: 'Chybí ANTHROPIC_API_KEY v souboru .env.' });
   let text: string;
+  let extraContext: string | undefined;
   try {
-    const body = (await readBody(req)) as { text?: unknown };
+    const body = (await readBody(req)) as { text?: unknown; voice?: unknown; briefingId?: unknown };
     text = typeof body.text === 'string' ? body.text.trim() : '';
+    // hlasový rozhovor s Jarvisem: krátké odpovědi, které se dobře čtou nahlas
+    if (body.voice === true && agentId === 'ondik') extraContext = voiceContext(typeof body.briefingId === 'string' ? body.briefingId : undefined);
   } catch (err) {
     return json(res, 400, { error: errorMessage(err) });
   }
@@ -262,6 +277,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), onTool: (label) => send('tool', { label }),
       onAttachment: (a) => send('attachment', a),
       signal: abort.signal,
+      extraContext,
     });
     send('done', {});
   } catch (err) {

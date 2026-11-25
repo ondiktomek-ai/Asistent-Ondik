@@ -28,6 +28,8 @@ interface World3DProps {
   /** Co má robot občas připomenout (agentId → text). */
   robotNotes?: Record<string, string>;
   onTownSummary?: (items: { id: string; icon: string; text: string }[]) => void;
+  /** Jarvis zrovna mluví/poslouchá – holo nad podstavcem na radnici se rozzáří. */
+  jarvis?: boolean;
 }
 
 /** Výchozí pohled na celé městečko; na úzké (telefonní) obrazovce víc z dálky. */
@@ -35,7 +37,7 @@ function overview(aspect: number) {
   return aspect < 0.85 ? { height: 44, dist: 40 } : { height: 19, dist: 24 };
 }
 
-export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {}, meetingId, meetingActive, onMeetingEnd, robotNotes = {}, onTownSummary }: World3DProps) {
+export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {}, meetingId, meetingActive, onMeetingEnd, robotNotes = {}, onTownSummary, jarvis = false }: World3DProps) {
   const darkness = darknessFor(time, lightMode);
   const night = darkness > 0.5;
   const [initial] = useState(() => overview(window.innerWidth / Math.max(1, window.innerHeight - 120)));
@@ -61,6 +63,7 @@ export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabel
         onMeetingEnd={onMeetingEnd}
         robotNotes={robotNotes}
         onTownSummary={onTownSummary}
+        jarvis={jarvis}
       />
     </Canvas>
   );
@@ -79,6 +82,7 @@ function Scene({
   onMeetingEnd,
   robotNotes = {},
   onTownSummary,
+  jarvis,
 }: {
   time: Date;
   darkness: number;
@@ -94,6 +98,7 @@ function Scene({
   /** Co má robot občas připomenout (agentId → text). */
   robotNotes?: Record<string, string>;
   onTownSummary?: (items: { id: string; icon: string; text: string }[]) => void;
+  jarvis: boolean;
 }) {
   const sky = useMemo(() => new Color('#a9dcff').lerp(new Color('#0b1330'), darkness), [darkness]);
   const select = onSelect as (id: string) => void;
@@ -122,7 +127,7 @@ function Scene({
 
       <Ground night={night} />
 
-      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} />
+      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} jarvis={jarvis} />
       <TownHallLabel selected={selectedId === TOWN_HALL_ID} onSelect={select} />
 
       {PLACEMENTS.map((pl) => {

@@ -8,14 +8,14 @@ export const AGENTS: AgentDef[] = [
   {
     id: 'ondik',
     name: 'Ondik',
-    role: 'Hlavní asistent · budoucí Jarvis',
+    role: 'Hlavní asistent · Jarvis',
     roomName: 'Radnice',
     icon: '⭐',
     color: '#f5b83d',
     theme: 'townhall',
     status: 'setup',
     description:
-      'Tvůj hlavní asistent a šéf týmu. Sídlí na radnici hned vedle tebe, přijímá požadavky a rozdělí je kolegům – Chronos zjistí termíny, Lexa udělá rešerši, Echo zprávy – a výsledky ti shrne dohromady. Časem z něj bude Jarvis – asistent, se kterým budeš mluvit hlasem a který ti umí zavolat.',
+      'Tvůj hlavní asistent a šéf týmu – Jarvis. Sídlí na radnici hned vedle tebe, přijímá požadavky a rozdělí je kolegům – Chronos zjistí termíny, Lexa udělá rešerši, Echo zprávy – a výsledky ti shrne dohromady. Umí ti nahlas přednést hlášení a mluvit s tebou hlasem; časem ti bude umět i zavolat.',
     duties: [
       'Přijímá tvoje požadavky a rozděluje je týmu',
       'Spojuje výsledky kolegů do jedné odpovědi',
@@ -26,7 +26,7 @@ export const AGENTS: AgentDef[] = [
       { name: 'Delegování', description: 'Zadává úkoly kolegům a čeká na jejich výsledky', status: 'connected' },
       { name: 'Společná paměť', description: 'Co si tým pamatuje o tobě, tvých zvyklostech a projektech', status: 'connected' },
       { name: 'Notifikace', description: 'Upozornění do telefonu', status: 'planned' },
-      { name: 'Hlas (Jarvis)', description: 'Mluvený rozhovor místo psaní', status: 'planned' },
+      { name: 'Hlas (Jarvis)', description: 'Mluvené hlášení (počasí, zprávy, program) a hlasový rozhovor – tlačítko Jarvis nahoře', status: 'connected' },
       { name: 'Telefonní hovory (Jarvis)', description: 'Zavolá ti, když je něco důležitého', status: 'planned' },
     ],
     idleLines: ['Co dnes vyřešíme?', 'Všichni na místech!', 'Jarvis mód: brzy…', 'Kávu, šéfe?'],

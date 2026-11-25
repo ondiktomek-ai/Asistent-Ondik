@@ -65,6 +65,8 @@ interface ChatHandlers {
   /** Agent něco vytvořil (např. plakátek) – klient ho může hned otevřít. */
   onAttachment?: (a: ChatAttachment) => void;
   signal: AbortSignal;
+  /** Doplňující pokyny k této jedné otázce (např. hlasový režim Jarvise). */
+  extraContext?: string;
 }
 
 interface AgentChatConfig {
@@ -275,7 +277,7 @@ async function askColleague(fromId: string, toId: string, task: string, o: RunOp
 }
 
 /** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
-export async function chatWithAgent(agentId: string, text: string, { onText, onTool, onAttachment, signal }: ChatHandlers): Promise<string> {
+export async function chatWithAgent(agentId: string, text: string, { onText, onTool, onAttachment, signal, extraContext }: ChatHandlers): Promise<string> {
   const cfg = CHAT_AGENTS[agentId];
   if (!cfg) throw new Error('S tímto agentem se zatím psát nedá.');
   if (busy.has(agentId)) throw new Error(`${cfg.name} ještě odpovídá na předchozí zprávu.`);
@@ -286,7 +288,7 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
     const messages: Anthropic.Beta.BetaMessageParam[] = [
       ...conv.api,
       { role: 'user', content: text },
-      { role: 'system', content: `${await cfg.context()}\n\n${await teamContext()}` },
+      { role: 'system', content: `${await cfg.context()}\n\n${await teamContext()}${extraContext ? `\n\n${extraContext}` : ''}` },
     ];
     const { reply, attachments } = await runAgent(agentId, messages, { depth: 0, onText, onTool, onAttachment, signal });
     const at = new Date().toISOString();

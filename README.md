@@ -3,8 +3,8 @@
 Osobní AI asistent jako 3D městečko robotů-agentů. Každý agent má vlastní **box**, ve kterém
 bydlí (postel, noční stolek) i pracuje (pracoviště podle zaměření). Boxy stojí v kruhu kolem
 **radnice**, sídla CEO Ondřeje Tomka. Na radnici sedí i hlavní asistent **Ondik**, který si s tebou
-povídá přes Claude a časem se z něj stane **Jarvis** – asistent, se kterým budeš mluvit hlasem
-a který ti umí zavolat.
+povídá přes Claude – a je to **Jarvis**: nahlas ti přednese hlášení a mluví s tebou hlasem
+(časem ti bude umět i zavolat).
 
 Ovládání: tažením otáčíš, kolečkem (na telefonu dvěma prsty) přibližuješ, kliknutím na box
 nebo radnici se kamera přiblíží a otevře detail. V noci jdou roboti k posteli.
@@ -84,6 +84,25 @@ každý řekne, jak na tom je, a pak se rozejdou. Když agent pracuje (chat, pla
 Logika je v `src/world3d/TownLife.tsx` (plánování činností a cest), geometrie cest a stánků
 v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí čas.
 
+## Jarvis – mluvené hlášení a hlasový rozhovor
+
+- Tlačítko **Jarvis** nahoře otevře Jarvise přes celou obrazovku. Jarvis sesbírá podklady
+  (čas, počasí v Lipníku, zprávy ze světa, Česka a okolí, kalendář, upozornění od Bita)
+  a nahlas přednese krátké hlášení: *„Dobrý večer, pane, je 22:58 a venku je jeden stupeň…“*.
+  Hlášení jde po částech (úvod, počasí, svět, Česko, region, program, otázka) – vlevo se
+  objevují kartičky se zprávami a programem, dole titulky, kde se rozsvěcí vyslovená slova.
+- Na konci se zeptá, jestli se do něčeho pustíte, a **poslouchá** – odpovíš hlasem
+  (nebo napíšeš). Mluvíš s Ondikem, takže umí zapojit kolegy (kalendář, rešerše, plakátky),
+  rozhovor pokračuje, dokud nepřestaneš mluvit. Mezerník = mluvit, Esc = zavřít.
+- Hlas i rozpoznávání řeči obstarává prohlížeč (zdarma, bez klíče). Nejlepší české hlasy
+  má **Microsoft Edge** (Antonín, Vlasta), proto spouštěč otevírá městečko v Edge
+  (Chrome: do `.env` dej `PROHLIZEC=chrome`). Hlas a rychlost se mění ozubeným kolečkem.
+- Rozpoznávání řeči posílá zvuk z mikrofonu Microsoftu (Edge) nebo Googlu (Chrome).
+  Na telefonu mikrofon funguje jen přes zabezpečenou adresu (https, např. Tailscale) –
+  přes běžnou adresu v síti se dá Jarvisovi psát a mluví nahlas.
+- Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
+  změnit v `.env`: `JARVIS_OSLOVENI=pane`.
+
 ## Tým: spolupráce a společná paměť
 
 - **Ondik je šéf týmu.** Když požadavek potřebuje kolegu, zadá mu úkol (nástroj `ask_colleague`)
@@ -159,7 +178,7 @@ Přesná čísla a vyúčtování jsou v **Claude Console → Usage / Cost**.
 
 | Box         | Agent   | Role                                           | Stav |
 |-------------|---------|------------------------------------------------|------|
-| 🏛️ Radnice  | Ondik   | Šéf týmu: rozděluje úkoly, společná paměť; budoucí Jarvis | ✅ běží |
+| 🏛️ Radnice  | Ondik   | Jarvis: šéf týmu, hlasové hlášení a rozhovor, společná paměť | ✅ běží |
 | 📰 Redakce  | Echo    | Zprávy ze světa, Česka a regionu, hodinové plakátky, počasí | ✅ běží |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
@@ -197,6 +216,6 @@ API ji automaticky zkusí na záložním modelu (server-side fallback).
 
 1. **Svět** ✅ – 3D městečko: boxy agentů v kruhu, radnice, den/noc, detail agenta
 2. **Mozek** ✅ – server na počítači, chat s Ondikem přes Claude, přístup z telefonu
-3. **Nástroje** – Chronos (Google Kalendář), Pošťák (Gmail + Centrum.cz), …
-4. **Živé městečko** – Ondik deleguje na kolegy, roboti ukazují, na čem pracují, ranní přehled
-5. **Jarvis** – Ondik dostane hlas a umí zavolat
+3. **Nástroje** – Chronos (Google Kalendář) ✅, Echo ✅, Lexa ✅, Bit ✅, Pošťák (Gmail + Centrum.cz) …
+4. **Živé městečko** ✅ – Ondik deleguje na kolegy, společná paměť, roboti ukazují, na čem pracují
+5. **Jarvis** – hlas a hlášení ✅, telefonní hovory …

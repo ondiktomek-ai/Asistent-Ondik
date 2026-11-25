@@ -20,6 +20,7 @@ import { useNewsroom } from './hooks/useNewsroom';
 import { useReminders } from './hooks/useReminders';
 import { NewsBar } from './components/NewsBar';
 import { InfoPanel, type TownItem } from './components/InfoPanel';
+import { JarvisOverlay, type JarvisPhase } from './jarvis/JarvisOverlay';
 import { ResearchPosterView } from './components/ResearchPosterView';
 import { DigestPoster } from './components/DigestPoster';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
@@ -75,6 +76,15 @@ export default function App() {
   };
   const endMeeting = useCallback(() => setMeetingActive(false), []);
 
+  // --- Jarvis: hlasové hlášení a rozhovor ---
+  const [jarvisOpen, setJarvisOpen] = useState(false);
+  const [jarvisState, setJarvisState] = useState<{ phase: JarvisPhase; label?: string } | null>(null);
+  const onJarvisPhase = useCallback((phase: JarvisPhase | null, label?: string) => setJarvisState(phase ? { phase, label } : null), []);
+  const openJarvis = () => {
+    setSelectedId(null);
+    setJarvisOpen(true);
+  };
+
   // --- Echo: zprávy, počasí, plakátky ---
   const serverOnline = !!status && (!status.authRequired || status.authorized);
   const newsroom = useNewsroom(serverOnline);
@@ -108,8 +118,9 @@ export default function App() {
     const s = new Set(busy);
     if (newsroom.digests?.generating) s.add('echo');
     teamActive.forEach((t) => s.add(t.to));
+    if (jarvisState?.label) s.add('ondik');
     return s;
-  }, [busy, newsroom.digests?.generating, teamActive]);
+  }, [busy, newsroom.digests?.generating, teamActive, jarvisState]);
   // co agent právě dělá v chatu (např. „Dívám se do kalendáře…“) – ukáže se v bublině nad robotem
   const [activity, setActivity] = useState<Record<string, string>>({});
   const onActivity = useCallback((agentId: string, label: string | null) => {
@@ -124,8 +135,9 @@ export default function App() {
     const labels: Record<string, string> = { ...activity };
     if (newsroom.digests?.generating) labels.echo = '📰 Píšu plakátek…';
     for (const t of teamActive) labels[t.to] ??= `🤝 Úkol od: ${AGENT_BY_ID[t.from]?.name ?? t.from}`;
+    if (jarvisState?.label) labels.ondik ??= jarvisState.label;
     return labels;
-  }, [activity, newsroom.digests?.generating, teamActive]);
+  }, [activity, newsroom.digests?.generating, teamActive, jarvisState]);
 
   // --- Chronos: návrat z přihlášení Googlu (?kalendar=ok / chyba) ---
   const [calendarNotice, setCalendarNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -296,6 +308,10 @@ export default function App() {
           ))}
         </nav>
         <div className="hud-right">
+          <button className={`jarvis-btn${jarvisOpen ? ' on' : ''}`} onClick={openJarvis} title="Jarvis: mluvené hlášení a hlasový rozhovor">
+            <span className="jarvis-btn-orb" aria-hidden />
+            Jarvis
+          </button>
           <button className="meeting-btn" onClick={startMeeting} disabled={meetingActive} title="Všichni roboti se sejdou na radnici">
             {meetingActive ? '🏛️ Porada probíhá…' : '🏛️ Svolat poradu'}
           </button>
@@ -328,6 +344,7 @@ export default function App() {
             onMeetingEnd={endMeeting}
             robotNotes={robotNotes}
             onTownSummary={setTown}
+            jarvis={!!jarvisState && jarvisState.phase !== 'idle' && jarvisState.phase !== 'error'}
           />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {research && <ResearchPosterView poster={research} onClose={() => setResearch(null)} />}
@@ -406,6 +423,14 @@ export default function App() {
           researchRefresh={researchRefresh}
         />
       </main>
+      {jarvisOpen && (
+        <JarvisOverlay
+          serverOnline={serverOnline}
+          onClose={() => setJarvisOpen(false)}
+          onPhase={onJarvisPhase}
+          onOpenResearch={openResearch}
+        />
+      )}
     </div>
   );
 }

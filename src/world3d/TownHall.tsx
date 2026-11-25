@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { DoubleSide, type Group, type Mesh } from 'three';
+import { DoubleSide, type Group, type Mesh, type PointLight } from 'three';
 import { TOWN_HALL_ID, TOWN_HALL_RADIUS } from '../world/layout';
 import { B, C, Chair, Desk, Plant, S } from './props';
 import { useSceneReady } from './useSceneReady';
@@ -42,18 +42,26 @@ export const ONDIK_SPOTS: [number, number, number][] = [
   [1.8, 0, -0.4],
 ];
 
-export function TownHall({ selected, darkness, onSelect }: { selected: boolean; darkness: number; onSelect: (id: string) => void }) {
+export function TownHall({ selected, darkness, onSelect, jarvis = false }: { selected: boolean; darkness: number; onSelect: (id: string) => void; jarvis?: boolean }) {
   const [hover, setHover] = useState(false);
   const holo = useRef<Mesh>(null);
   const ring = useRef<Group>(null);
+  const light = useRef<PointLight>(null);
+  const boost = useRef(0);
 
   useFrame(({ clock }, dt) => {
+    // když Jarvis mluví, holo se zrychlí, zvětší a pulzuje
+    boost.current += ((jarvis ? 1 : 0) - boost.current) * Math.min(1, dt * 3);
+    const b = boost.current;
+    const t = clock.elapsedTime;
     if (holo.current) {
-      holo.current.rotation.y += dt * 0.6;
-      holo.current.rotation.x += dt * 0.25;
-      holo.current.position.y = 1.75 + Math.sin(clock.elapsedTime * 1.5) * 0.08;
+      holo.current.rotation.y += dt * (0.6 + b * 2.4);
+      holo.current.rotation.x += dt * (0.25 + b * 0.8);
+      holo.current.position.y = 1.75 + Math.sin(t * 1.5) * 0.08 + b * 0.15;
+      holo.current.scale.setScalar(1 + b * (0.35 + 0.12 * Math.sin(t * 9)));
     }
-    if (ring.current) ring.current.rotation.y -= dt * 0.8;
+    if (ring.current) ring.current.rotation.y -= dt * (0.8 + b * 3);
+    if (light.current) light.current.intensity = 1.5 + darkness * 3 + b * (4 + 2 * Math.sin(t * 9));
   });
 
   const click = (e: ThreeEvent<MouseEvent>) => {
@@ -140,7 +148,7 @@ export function TownHall({ selected, darkness, onSelect }: { selected: boolean; 
             <icosahedronGeometry args={[0.42, 1]} />
             <meshStandardMaterial color={JARVIS} emissive={JARVIS} emissiveIntensity={1.6} wireframe transparent opacity={0.85} />
           </mesh>
-          <pointLight position={[0, 1.4, 0]} color={JARVIS} intensity={1.5 + darkness * 3} distance={5} />
+          <pointLight ref={light} position={[0, 1.4, 0]} color={JARVIS} intensity={1.5 + darkness * 3} distance={5} />
         </group>
       </group>
 

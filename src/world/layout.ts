@@ -4,7 +4,7 @@
  */
 
 export const VACANT_ID = 'vacant';
-/** Na radnici sídlí Ondik – hlavní asistent, budoucí Jarvis. Výběr radnice = výběr Ondika. */
+/** Na radnici sídlí Ondik – hlavní asistent Jarvis. Výběr radnice = výběr Ondika. */
 export const TOWN_HALL_ID = 'ondik';
 
 /** Pořadí boxů po kruhu. `null` = volný box pro budoucího agenta. */

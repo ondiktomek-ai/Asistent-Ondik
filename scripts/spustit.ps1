@@ -106,19 +106,25 @@ if (-not (Bezi)) {
   # I kdyby kontrola nic nenašla, server běží (okno je otevřené) – okno městečka otevřeme tak jako tak.
 }
 
-# Okno městečka
-$prohlizece = @(
-  "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-  "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-  "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+# Okno městečka – přednostně Edge (má kvalitní české hlasy pro Jarvise: Antonín, Vlasta).
+# Kdo chce Chrome, dá do .env řádek PROHLIZEC=chrome.
+$edge = @(
   "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
   "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
 )
+$chrome = @(
+  "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+  "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+  "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+)
+$prohlizece = if ($nastaveni['PROHLIZEC'] -eq 'chrome') { $chrome + $edge } else { $edge + $chrome }
 $prohlizec = $prohlizece | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
 if ($prohlizec) {
   # Vlastní profil: okno se nemíchá s běžným prohlížením a pamatuje si svou polohu.
-  $okno = Join-Path $env:LOCALAPPDATA 'MesteckoOndik\okno'
+  # Edge a Chrome nesmí sdílet jeden profil – každý má svou složku.
+  $slozka = if ($prohlizec -match 'msedge') { 'okno-edge' } else { 'okno' }
+  $okno = Join-Path $env:LOCALAPPDATA "MesteckoOndik\$slozka"
   $argumenty = @("--app=$url", "--user-data-dir=`"$okno`"", '--no-first-run', '--no-default-browser-check')
   if ($nastaveni['OKNO_POZICE'] -match '^-?\d+,-?\d+$') { $argumenty += "--window-position=$($nastaveni['OKNO_POZICE'])" }
   if ($nastaveni['OKNO_CELA_OBRAZOVKA'] -eq 'ano') { $argumenty += '--start-fullscreen' }
