@@ -46,6 +46,17 @@ export default function App() {
   }, []);
   const selected = selectedId ? (AGENT_BY_ID[selectedId] ?? null) : null;
 
+  // --- Porada na radnici ---
+  const [meetingId, setMeetingId] = useState(0);
+  const [meetingActive, setMeetingActive] = useState(false);
+  const startMeeting = () => {
+    if (meetingActive) return;
+    setSelectedId(null);
+    setMeetingActive(true);
+    setMeetingId((n) => n + 1);
+  };
+  const endMeeting = useCallback(() => setMeetingActive(false), []);
+
   // --- Echo: zprávy, počasí, plakátky ---
   const serverOnline = !!status && (!status.authRequired || status.authorized);
   const newsroom = useNewsroom(serverOnline);
@@ -165,6 +176,9 @@ export default function App() {
           ))}
         </nav>
         <div className="hud-right">
+          <button className="meeting-btn" onClick={startMeeting} disabled={meetingActive} title="Všichni roboti se sejdou na radnici">
+            {meetingActive ? '🏛️ Porada probíhá…' : '🏛️ Svolat poradu'}
+          </button>
           <div className="segmented" role="group" aria-label="Osvětlení">
             {LIGHT_MODES.map((m) => (
               <button key={m.id} className={lightMode === m.id ? 'active' : ''} onClick={() => setLightMode(m.id)}>
@@ -186,7 +200,13 @@ export default function App() {
 
       <main className={`stage${selected || isVacantId(selectedId) ? ' panel-open' : ''}`}>
         <div className="world-wrap">
-          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId} busy={allBusy} busyLabels={busyLabels} />
+          <World3D time={time} lightMode={lightMode} selectedId={selectedId} onSelect={setSelectedId}
+            busy={allBusy}
+            busyLabels={busyLabels}
+            meetingId={meetingId}
+            meetingActive={meetingActive}
+            onMeetingEnd={endMeeting}
+          />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {poster && <DigestPoster digest={poster} onClose={closePoster} />}
           {reminders.length > 0 && (

@@ -1,27 +1,73 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html, RoundedBox } from '@react-three/drei';
 import type { Group, Mesh } from 'three';
+import { heightAt, type V2 } from './town';
 
-type V3 = [number, number, number];
+/** Stav robota, který řídí simulace městečka (TownLife) a robot ho jen vykresluje. */
+export interface RobotBrain {
+  id: string;
+  pos: V2;
+  heading: number;
+  walking: boolean;
+  sleeping: boolean;
+  bubble: string | null;
+  carry: 'kafe' | 'rohlik' | 'jablko' | 'zmrzlina' | null;
+}
 
-interface Robot3DProps {
+interface RobotBodyProps {
+  brain: RobotBrain;
   color: string;
-  spots: V3[];
-  nightSpot: V3;
-  night: boolean;
   busy: boolean;
-  lines: string[];
-  scale?: number;
-  /** Bublina, když robot pracuje. */
+  /** Bublina, když robot pracuje (např. „Přemýšlím…“). */
   busyText?: string;
 }
 
-const SPEED = 0.9; // m/s
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
+/** Věc v ruce robota. */
+function Carried({ item }: { item: NonNullable<RobotBrain['carry']> }) {
+  if (item === 'kafe')
+    return (
+      <group>
+        <mesh>
+          <cylinderGeometry args={[0.05, 0.04, 0.12, 12]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh position={[0, 0.065, 0]}>
+          <cylinderGeometry args={[0.052, 0.052, 0.02, 12]} />
+          <meshStandardMaterial color="#6b3f22" />
+        </mesh>
+      </group>
+    );
+  if (item === 'rohlik')
+    return (
+      <mesh rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.04, 0.12, 4, 8]} />
+        <meshStandardMaterial color="#d9963f" />
+      </mesh>
+    );
+  if (item === 'jablko')
+    return (
+      <mesh>
+        <sphereGeometry args={[0.06, 12, 10]} />
+        <meshStandardMaterial color="#d93b3b" />
+      </mesh>
+    );
+  return (
+    <group>
+      <mesh position={[0, -0.04, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.04, 0.12, 10]} />
+        <meshStandardMaterial color="#e3b26b" />
+      </mesh>
+      <mesh position={[0, 0.04, 0]}>
+        <sphereGeometry args={[0.05, 12, 10]} />
+        <meshStandardMaterial color="#f7a8c8" />
+      </mesh>
+    </group>
+  );
+}
 
-/** Robot-agent. Přes den chodí po svém pracovišti, v noci stojí u postele. */
-export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1, busyText = '💭 Přemýšlím…' }: Robot3DProps) {
+/** Robot-agent. Kde je a co dělá, určuje simulace; tady se jen animuje tělo. */
+export function RobotBody({ brain, color, busy, busyText = '💭 Přemýšlím…' }: RobotBodyProps) {
   const root = useRef<Group>(null);
   const body = useRef<Group>(null);
   const legL = useRef<Mesh>(null);
@@ -29,94 +75,36 @@ export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1
   const armL = useRef<Group>(null);
   const armR = useRef<Group>(null);
   const eyes = useRef<Group>(null);
-  const st = useRef({
-    pos: [...spots[Math.floor(Math.random() * spots.length)]] as V3,
-    target: null as V3 | null,
-    wait: rand(0.5, 3),
-    heading: 0,
-    walk: 0,
-    nextBubble: rand(3, 14),
-  });
+  const walkPhase = useRef(0);
   const [bubble, setBubble] = useState<string | null>(null);
-
-  // Řeč: občas pronese hlášku (v noci chrápe).
-  useEffect(() => {
-    if (!bubble) return;
-    const t = setTimeout(() => setBubble(null), 3500);
-    return () => clearTimeout(t);
-  }, [bubble]);
+  const [carry, setCarry] = useState<RobotBrain['carry']>(null);
 
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
-    const s = st.current;
     const t = clock.elapsedTime;
+    // bublina a nesená věc se mění zřídka – React stav jen při změně
+    if (brain.bubble !== bubble) setBubble(brain.bubble);
+    if (brain.carry !== carry) setCarry(brain.carry);
 
-    // cíl cesty
-    if (busy) {
-      s.target = null; // když přemýšlí, stojí na místě
-    } else if (night) {
-      s.target = nightSpot;
-    } else if (!s.target) {
-      s.wait -= dt;
-      if (s.wait <= 0) s.target = spots[Math.floor(Math.random() * spots.length)];
-    }
-
-    let walking = false;
-    if (s.target) {
-      const dx = s.target[0] - s.pos[0];
-      const dz = s.target[2] - s.pos[2];
-      const dist = Math.hypot(dx, dz);
-      if (dist < 0.03) {
-        if (!night) {
-          s.target = null;
-          s.wait = rand(2, 7);
-        }
-      } else {
-        const step = Math.min(dist, SPEED * dt);
-        s.pos[0] += (dx / dist) * step;
-        s.pos[2] += (dz / dist) * step;
-        walking = true;
-        const want = Math.atan2(dx, dz);
-        let d = want - s.heading;
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        s.heading += d * Math.min(1, dt * 10);
-      }
-    }
-    if (!walking) {
-      // v klidu se otočí čelem do středu městečka (+z boxu)
-      let d = 0 - s.heading;
-      d = Math.atan2(Math.sin(d), Math.cos(d));
-      s.heading += d * Math.min(1, dt * 3);
-    }
-    s.walk += dt * (walking ? 9 : 0);
-
-    // bubliny
-    if (!busy) {
-      s.nextBubble -= dt;
-      if (s.nextBubble <= 0) {
-        s.nextBubble = rand(10, 24);
-        const pool = night ? ['Zzz…', 'Zzz…', '💤'] : lines;
-        if (pool.length) setBubble(pool[Math.floor(Math.random() * pool.length)]);
-      }
-    }
-
+    if (brain.walking) walkPhase.current += dt * 9;
     if (root.current) {
-      root.current.position.set(s.pos[0], 0, s.pos[2]);
-      root.current.rotation.y = s.heading;
+      root.current.position.set(brain.pos[0], heightAt(brain.pos), brain.pos[1]);
+      root.current.rotation.y = brain.heading;
     }
-    if (body.current) body.current.position.y = walking ? Math.abs(Math.sin(s.walk)) * 0.04 : Math.sin(t * 2.5) * 0.015;
-    const swing = walking ? Math.sin(s.walk) * 0.5 : 0;
+    if (body.current) body.current.position.y = brain.walking ? Math.abs(Math.sin(walkPhase.current)) * 0.04 : Math.sin(t * 2.5) * 0.015;
+    const swing = brain.walking ? Math.sin(walkPhase.current) * 0.5 : 0;
     if (legL.current) legL.current.rotation.x = swing;
     if (legR.current) legR.current.rotation.x = -swing;
     if (armL.current) armL.current.rotation.x = busy ? -0.9 + Math.sin(t * 3) * 0.15 : -swing;
-    if (armR.current) armR.current.rotation.x = swing;
-    if (eyes.current) eyes.current.scale.y = night && !walking ? 0.15 : t % 4.5 < 0.12 ? 0.1 : 1;
+    // s nákupem drží pravou ruku před sebou
+    if (armR.current) armR.current.rotation.x = brain.carry ? -1.1 : swing;
+    if (eyes.current) eyes.current.scale.y = brain.sleeping ? 0.15 : t % 4.5 < 0.12 ? 0.1 : 1;
   });
 
   const shownBubble = busy ? busyText : bubble;
 
   return (
-    <group ref={root} scale={scale}>
+    <group ref={root}>
       <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
         <circleGeometry args={[0.28, 20]} />
         <meshBasicMaterial color="#000" transparent opacity={0.25} depthWrite={false} polygonOffset polygonOffsetFactor={-4} />
@@ -137,17 +125,23 @@ export function Robot3D({ color, spots, nightSpot, night, busy, lines, scale = 1
           <circleGeometry args={[0.07, 20]} />
           <meshStandardMaterial color="#ffffff" emissive={color} emissiveIntensity={0.6} />
         </mesh>
-        {[
-          [armL, -0.28],
-          [armR, 0.28],
-        ].map(([ref, x]) => (
-          <group key={x as number} ref={ref as React.RefObject<Group>} position={[x as number, 0.62, 0]}>
-            <mesh position={[0, -0.12, 0]} castShadow>
-              <boxGeometry args={[0.08, 0.26, 0.1]} />
-              <meshStandardMaterial color={color} roughness={0.45} />
-            </mesh>
-          </group>
-        ))}
+        <group ref={armL} position={[-0.28, 0.62, 0]}>
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.26, 0.1]} />
+            <meshStandardMaterial color={color} roughness={0.45} />
+          </mesh>
+        </group>
+        <group ref={armR} position={[0.28, 0.62, 0]}>
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.26, 0.1]} />
+            <meshStandardMaterial color={color} roughness={0.45} />
+          </mesh>
+          {carry && (
+            <group position={[0, -0.3, 0.02]}>
+              <Carried item={carry} />
+            </group>
+          )}
+        </group>
         <RoundedBox args={[0.52, 0.38, 0.4]} radius={0.11} position={[0, 0.88, 0]} castShadow>
           <meshStandardMaterial color="#e8edf5" roughness={0.35} />
         </RoundedBox>

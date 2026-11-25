@@ -5,8 +5,7 @@ import { Color, Vector3, type Group } from 'three';
 import type { AgentDef } from '../world/types';
 import { BOX, placementId, type BoxPlacement } from '../world/layout';
 import { B, Bed, MovingBoxes, Nightstand, Plant } from './props';
-import { INTERIORS, NIGHT_SPOT } from './themes';
-import { Robot3D } from './Robot3D';
+import { INTERIORS } from './themes';
 import { useSceneReady } from './useSceneReady';
 
 export function tint(hex: string, toWhite: number) {
@@ -20,14 +19,11 @@ interface OfficeBoxProps {
   night: boolean;
   darkness: number;
   time: Date;
-  busy: boolean;
-  /** Text bubliny, když robot pracuje (výchozí „Přemýšlím…“). */
-  busyText?: string;
   onSelect: (id: string) => void;
 }
 
 /** Jeden kancelářský box: otevřený „domeček pro panenky“ – byt + pracoviště agenta. */
-export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, night, darkness, time, busy, busyText, onSelect }: OfficeBoxProps) {
+export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, night, darkness, time, onSelect }: OfficeBoxProps) {
   const [hover, setHover] = useState(false);
   const ready = useSceneReady();
   const accent = agent?.color ?? '#8f9bb5';
@@ -114,7 +110,6 @@ export const OfficeBox = memo(function OfficeBox({ placement, agent, selected, n
           {/* pracoviště */}
           {interior.render({ accent, time, night })}
           {interior.wall && <group ref={wallDecor}>{interior.wall({ accent, time, night })}</group>}
-          <Robot3D color={agent.color} spots={interior.spots} nightSpot={NIGHT_SPOT} night={night && !busy} busy={busy} lines={agent.idleLines} busyText={busyText} />
         </>
       ) : (
         <>

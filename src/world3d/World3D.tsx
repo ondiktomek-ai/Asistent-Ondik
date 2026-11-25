@@ -9,6 +9,9 @@ import { darknessFor, type LightMode } from '../hooks/useClock';
 import { OfficeBox } from './OfficeBox';
 import { TownHall, TownHallLabel } from './TownHall';
 import { B, C, S } from './props';
+import { Stall } from './Stall';
+import { TownLife } from './TownLife';
+import { FLOWER_GAPS, STALLS, flowerBedAngle } from './town';
 
 interface World3DProps {
   time: Date;
@@ -18,6 +21,10 @@ interface World3DProps {
   busy: Set<string>;
   /** Vlastní text bubliny pracujícího robota (agentId → text). */
   busyLabels?: Record<string, string>;
+  /** Zvýšením čísla se svolá porada na radnici. */
+  meetingId: number;
+  meetingActive: boolean;
+  onMeetingEnd: () => void;
 }
 
 /** Výchozí pohled na celé městečko; na úzké (telefonní) obrazovce víc z dálky. */
@@ -25,7 +32,7 @@ function overview(aspect: number) {
   return aspect < 0.85 ? { height: 44, dist: 40 } : { height: 19, dist: 24 };
 }
 
-export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {} }: World3DProps) {
+export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {}, meetingId, meetingActive, onMeetingEnd }: World3DProps) {
   const darkness = darknessFor(time, lightMode);
   const night = darkness > 0.5;
   const [initial] = useState(() => overview(window.innerWidth / Math.max(1, window.innerHeight - 120)));
@@ -38,7 +45,18 @@ export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabel
       camera={{ position: [0, initial.height, initial.dist], fov: 45, near: 0.8, far: 260 }}
       onPointerMissed={() => onSelect(null)}
     >
-      <Scene time={time} darkness={darkness} night={night} selectedId={selectedId} onSelect={onSelect} busy={busy} busyLabels={busyLabels} />
+      <Scene
+        time={time}
+        darkness={darkness}
+        night={night}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        busy={busy}
+        busyLabels={busyLabels}
+        meetingId={meetingId}
+        meetingActive={meetingActive}
+        onMeetingEnd={onMeetingEnd}
+      />
     </Canvas>
   );
 }
@@ -51,6 +69,9 @@ function Scene({
   onSelect,
   busy,
   busyLabels = {},
+  meetingId,
+  meetingActive,
+  onMeetingEnd,
 }: {
   time: Date;
   darkness: number;
@@ -60,6 +81,9 @@ function Scene({
   busy: Set<string>;
   /** Vlastní text bubliny pracujícího robota (agentId → text). */
   busyLabels?: Record<string, string>;
+  meetingId: number;
+  meetingActive: boolean;
+  onMeetingEnd: () => void;
 }) {
   const sky = useMemo(() => new Color('#a9dcff').lerp(new Color('#0b1330'), darkness), [darkness]);
   const select = onSelect as (id: string) => void;
@@ -88,7 +112,7 @@ function Scene({
 
       <Ground night={night} />
 
-      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} busy={busy.has(TOWN_HALL_ID)} />
+      <TownHall selected={selectedId === TOWN_HALL_ID} darkness={darkness} onSelect={select} />
       <TownHallLabel selected={selectedId === TOWN_HALL_ID} onSelect={select} />
 
       {PLACEMENTS.map((pl) => {
@@ -102,8 +126,6 @@ function Scene({
             night={night}
             darkness={darkness}
             time={time}
-            busy={agent ? busy.has(agent.id) : false}
-            busyText={agent ? busyLabels[agent.id] : undefined}
             onSelect={select}
           />
         );
@@ -114,6 +136,12 @@ function Scene({
         return <LampPost key={pl.key} p={[Math.sin(a) * (RING_RADIUS - 1.2), 0, Math.cos(a) * (RING_RADIUS - 1.2)]} on={darkness > 0.25} />;
       })}
 
+      {STALLS.map((st) => (
+        <Stall key={st.id} stall={st} />
+      ))}
+
+      <TownLife night={night} busy={busy} busyLabels={busyLabels} meetingId={meetingId} onMeetingEnd={onMeetingEnd} onSelect={select} />
+
       <OrbitControls
         makeDefault
         enableDamping
@@ -121,10 +149,10 @@ function Scene({
         minDistance={5}
         maxDistance={55}
         maxPolarAngle={1.38}
-        autoRotate={!selectedId}
+        autoRotate={!selectedId && !meetingActive}
         autoRotateSpeed={0.35}
       />
-      <CameraRig selectedId={selectedId} />
+      <CameraRig selectedId={selectedId ?? (meetingActive ? TOWN_HALL_ID : null)} />
     </>
   );
 }
@@ -165,12 +193,12 @@ function Ground({ night }: { night: boolean }) {
           </mesh>
         );
       })}
-      {/* záhony mezi cestami */}
-      {PLACEMENTS.map((pl) => {
-        const a = pl.angle + Math.PI / PLACEMENTS.length;
+      {/* záhony v mezerách, kde nejsou stánky */}
+      {FLOWER_GAPS.map((k) => {
+        const a = flowerBedAngle(k);
         const r = (TOWN_HALL_RADIUS + RING_RADIUS) / 2 + 0.3;
         return (
-          <group key={`bed-${pl.key}`} position={[Math.sin(a) * r, 0, Math.cos(a) * r]}>
+          <group key={`bed-${k}`} position={[Math.sin(a) * r, 0, Math.cos(a) * r]}>
             <C p={[0, 0.12, 0]} r={1.1} h={0.24} c="#9a8f7a" seg={24} />
             <C p={[0, 0.2, 0]} r={1.0} h={0.1} c="#4f8f45" seg={24} />
             {[0, 1, 2, 3, 4].map((k) => {

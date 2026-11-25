@@ -73,6 +73,17 @@ npm run dev:server   # API server s automatickým restartem (port 8787)
 npm run dev          # kancelář s hot-reloadem na http://localhost:5173
 ```
 
+## Život v městečku
+
+Roboti nejsou zavření v kancelářích: pracují v boxech, ale občas si dojdou **nakoupit do stánků**
+na náměstí (☕ kavárna, 🥐 pekárna, 🍎 ovoce, 🍦 zmrzlina) a nesou si nákup v ruce, **navštěvují se**
+(pozdraví a popovídají si) nebo se **projdou** kolem radnice. V noci spí u postele.
+Tlačítkem **🏛️ Svolat poradu** se všichni sejdou na radnici kolem podstavce pro Jarvise,
+každý řekne, jak na tom je, a pak se rozejdou. Když agent pracuje (chat, plakátek), vrátí se ke stolu.
+
+Logika je v `src/world3d/TownLife.tsx` (plánování činností a cest), geometrie cest a stánků
+v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí čas.
+
 ## Echo – zpravodaj
 
 - Každých **10 minut** projde zpravodajské weby (RSS) a nové zprávy pošle do **pásu vpravo**
@@ -128,7 +139,9 @@ src/
   world3d/TownHall.tsx     ← radnice s podstavcem pro Jarvise
   world3d/themes.tsx       ← vybavení boxů + místa, kam robot chodí
   world3d/props.tsx        ← 3D nábytek
-  world3d/Robot3D.tsx      ← robot (chůze, bubliny)
+  world3d/Robot3D.tsx      ← robot (tělo, animace, bubliny, nákup v ruce)
+  world3d/TownLife.tsx     ← život v městečku: činnosti, cesty, návštěvy, porada
+  world3d/Stall.tsx        ← stánky na náměstí
   components/Chat.tsx      ← chat s agentem
   api.ts                   ← klient serveru
 ```
