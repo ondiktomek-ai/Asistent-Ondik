@@ -143,7 +143,11 @@ async function accessToken(force = false): Promise<string> {
     return tok.access_token;
   } catch (err) {
     if (err instanceof Error && /invalid_grant|expired|revoked/i.test(err.message)) {
-      throw new Error('Přihlášení ke Googlu vypršelo. V panelu Chronose se prosím přihlas znovu.');
+      // Google přihlášení zrušil (např. testovací režim po 7 dnech) – zapomeneme ho,
+      // aby panel Chronose hned nabídl nové přihlášení.
+      token = null;
+      await writeJson(TOKEN_FILE, null);
+      throw new Error('Přihlášení ke Googlu vypršelo. V panelu Chronose (záložka Kalendář) se prosím přihlas znovu – stačí jedno kliknutí.');
     }
     throw err;
   }
