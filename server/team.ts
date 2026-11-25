@@ -149,6 +149,7 @@ export const COLLEAGUE_SKILLS: Record<string, string> = {
   chronos: 'Google Kalendář – co je naplánováno, volné termíny, vytvoření/přesunutí/smazání události',
   lexa: 'rešerše na webu (hledá a čte stránky, uvádí zdroje), umí výsledek vylepit jako plakátek',
   echo: 'aktuální zprávy ze světa, Česka a regionu Lipník nad Bečvou a počasí pro Lipník',
+  klik: 'otevírá weby a aplikace v prohlížeči (YouTube, Spotify, Google, Instagram…), i s hledáním',
   bit: 'technický stav městečka, upozornění, seznam nápadů na vylepšení, odhad útraty za Claude API',
 };
 

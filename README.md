@@ -103,6 +103,18 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
   změnit v `.env`: `JARVIS_OSLOVENI=pane`.
 
+## Klik – spouštěč webů
+
+- Robot Klik bydlí v boxu-kině. Jeho panel začíná **dlaždicemi**: YouTube, Spotify, Google,
+  Instagram, Gmail, Mapy.cz – jedno kliknutí a web se otevře. Nahoře je **hledání**
+  (vybereš službu a napíšeš, co hledat).
+- Na počítači se web otevře ve tvém **výchozím prohlížeči** (tam, kde jsi přihlášený),
+  ne v okně městečka. Na telefonu se otevře v telefonu.
+- Vlastní dlaždice: ＋ Přidat (název, adresa, ikona, barva); ✏️ Upravit dlaždice = odebrat /
+  vrátit výchozí sadu. Ukládají se do `data/spoustec.json`.
+- Klikovi i Jarvisovi můžeš napsat nebo říct „pusť lofi na YouTube“, „najdi na Spotify Kabát“ –
+  Ondik/Jarvis to otevře sám (nástroj `open_link`). Otevírat jde jen webové adresy (http/https).
+
 ## Tým: spolupráce a společná paměť
 
 - **Ondik je šéf týmu.** Když požadavek potřebuje kolegu, zadá mu úkol (nástroj `ask_colleague`)
@@ -184,8 +196,8 @@ Přesná čísla a vyúčtování jsou v **Claude Console → Usage / Cost**.
 | 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
 | 📚 Knihovna | Lexa    | Rešerše na webu, plakátky z rešerší            | ✅ běží |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
+| 🎬 Kino     | Klik    | Spouštěč: YouTube, Spotify, Google… jedním kliknutím | ✅ běží |
 | 🔧 Dílna    | Bit     | Údržba: kontroly, připomínky, nápady na vylepšení | ✅ běží |
-| ＋ Volný box | –      | Místo pro budoucího agenta                     |      |
 
 ## Struktura
 

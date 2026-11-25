@@ -142,6 +142,24 @@ export const AGENTS: AgentDef[] = [
     ],
     idleLines: ['Servery běží. 🔧', 'Kontroluju městečko…', 'Máš nápad? Zapíšu ho!', '01001000 01101001', 'Všechno v cajku.'],
   },
+  {
+    id: 'klik',
+    name: 'Klik',
+    role: 'Spouštěč aplikací',
+    roomName: 'Kino',
+    icon: '▶️',
+    color: '#ff4fa3',
+    theme: 'media',
+    status: 'setup',
+    description:
+      'Bydlí v malém kině s plátnem a repráky. Jedním kliknutím ti otevře YouTube, Spotify, Google, Instagram a další weby – na počítači v tvém normálním prohlížeči, kde jsi přihlášený. Umí i rovnou vyhledat („pusť lofi na YouTube“), a to i přes Jarvise hlasem.',
+    duties: ['Dlaždice s oblíbenými weby', 'Hledání na YouTube, Spotify, Googlu…', 'Vlastní dlaždice (přidat/odebrat)', 'Otevírání na pokyn Jarvise'],
+    tools: [
+      { name: 'Spouštěč', description: 'YouTube, Spotify, Google, Instagram, Gmail, Mapy.cz + vlastní', status: 'connected' },
+      { name: 'Hledání', description: 'Rovnou vyhledá na vybrané službě', status: 'connected' },
+    ],
+    idleLines: ['Popcorn je hotový! 🍿', 'Co pustíme?', 'Spotify, nebo YouTube?', '▶️ Play!', 'Hlasitost na max!'],
+  },
 ];
 
 export const AGENT_BY_ID: Record<string, AgentDef> = Object.fromEntries(AGENTS.map((a) => [a.id, a]));

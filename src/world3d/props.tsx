@@ -522,3 +522,91 @@ export function WeatherStation({ p }: { p: V3 }) {
     </G>
   );
 }
+
+// ---------------------------------------------------------------- kino (Klik)
+
+/** Velké plátno na zdi: obraz pomalu mění barvy, uprostřed tlačítko „přehrát“ a běžící lišta. */
+export function BigScreen({ p, w = 2.6, h = 1.3, colors }: { p: V3; w?: number; h?: number; colors: string[] }) {
+  const screen = useRef<Mesh>(null);
+  const bar = useRef<Mesh>(null);
+  const tmp = useRef(new Color());
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime * 0.25;
+    const i = Math.floor(t) % colors.length;
+    const mix = t - Math.floor(t);
+    const mat = screen.current?.material as MeshStandardMaterial | undefined;
+    if (mat) {
+      tmp.current.set(colors[i]).lerp(new Color(colors[(i + 1) % colors.length]), mix);
+      mat.color.copy(tmp.current);
+      mat.emissive.copy(tmp.current);
+    }
+    if (bar.current) bar.current.scale.x = Math.max(0.02, (clock.elapsedTime * 0.05) % 1);
+  });
+  return (
+    <G p={p}>
+      <B p={[0, 0, 0]} s={[w + 0.12, h + 0.12, 0.06]} c="#0c0f16" />
+      <mesh ref={screen} position={[0, 0, 0.035]}>
+        <boxGeometry args={[w, h, 0.01]} />
+        <meshStandardMaterial color={colors[0]} emissive={colors[0]} emissiveIntensity={0.55} />
+      </mesh>
+      {/* tlačítko přehrát */}
+      <mesh position={[0, 0.05, 0.045]}>
+        <circleGeometry args={[0.2, 28]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.4} transparent opacity={0.85} />
+      </mesh>
+      <mesh position={[0.025, 0.05, 0.05]}>
+        <circleGeometry args={[0.11, 3]} />
+        <meshStandardMaterial color="#ff2b2b" emissive="#ff2b2b" emissiveIntensity={0.8} />
+      </mesh>
+      {/* průběh videa */}
+      <B p={[0, -h / 2 + 0.1, 0.045]} s={[w - 0.3, 0.025, 0.005]} c="#ffffff" o={0.35} />
+      <group position={[-(w - 0.3) / 2, -h / 2 + 0.1, 0.05]}>
+        <mesh ref={bar} position={[(w - 0.3) / 2, 0, 0]}>
+          <boxGeometry args={[w - 0.3, 0.03, 0.005]} />
+          <meshStandardMaterial color="#ff2b2b" emissive="#ff2b2b" emissiveIntensity={1} />
+        </mesh>
+      </group>
+    </G>
+  );
+}
+
+/** Reprobedna – membrány jemně „pulzují“ do rytmu. */
+export function Speaker({ p, r = 0 }: { p: V3; r?: number }) {
+  const cones = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const beat = 1 + 0.08 * Math.max(0, Math.sin(clock.elapsedTime * 8.4));
+    cones.current?.children.forEach((c) => c.scale.setScalar(beat));
+  });
+  return (
+    <G p={p} r={r}>
+      <B p={[0, 0.5, 0]} s={[0.42, 1.0, 0.36]} c="#1a1f2b" />
+      <group ref={cones}>
+        <mesh position={[0, 0.7, 0.185]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.09, 0.11, 0.02, 20]} />
+          <meshStandardMaterial color="#3a4256" />
+        </mesh>
+        <mesh position={[0, 0.35, 0.185]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.13, 0.16, 0.02, 24]} />
+          <meshStandardMaterial color="#3a4256" />
+        </mesh>
+      </group>
+    </G>
+  );
+}
+
+/** Kyblík popcornu. */
+export function Popcorn({ p }: { p: V3 }) {
+  return (
+    <G p={p}>
+      <C p={[0, 0.09, 0]} r={[0.09, 0.065]} h={0.18} c="#e8505b" seg={12} />
+      {[
+        [0, 0.2, 0],
+        [0.04, 0.21, 0.03],
+        [-0.04, 0.2, -0.02],
+        [0.02, 0.23, -0.04],
+      ].map((q, i) => (
+        <S key={i} p={q as V3} r={0.035} c="#fff3c4" />
+      ))}
+    </G>
+  );
+}

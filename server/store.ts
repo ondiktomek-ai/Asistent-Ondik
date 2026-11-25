@@ -2,11 +2,10 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type Anthropic from '@anthropic-ai/sdk';
 
-export interface ChatAttachment {
-  kind: 'lexa-poster';
-  id: string;
-  title: string;
-}
+export type ChatAttachment =
+  | { kind: 'lexa-poster'; id: string; title: string }
+  /** odkaz, který agent otevřel (na počítači se otevře sám, na telefonu je to tlačítko) */
+  | { kind: 'link'; id: string; title: string; url: string };
 
 export interface DisplayMessage {
   role: 'user' | 'assistant';

@@ -3431,3 +3431,228 @@ button {
     animation: none;
   }
 }
+
+.jarvis-link {
+  border-color: rgba(255, 79, 163, 0.6);
+}
+
+.chat-attachment.link {
+  border-color: #ff4fa3;
+}
+
+/* =====================================================================
+   KLIK – spouštěč
+   ===================================================================== */
+.klik {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.klik-search {
+  display: flex;
+  gap: 6px;
+}
+
+.klik-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: inherit;
+  font: inherit;
+}
+
+.klik-search button {
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.klik-search button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.klik-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.klik-services button {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.klik-services button.active {
+  border-color: var(--c);
+  color: var(--text);
+  background: color-mix(in srgb, var(--c) 18%, transparent);
+}
+
+.klik-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.klik-tile-wrap {
+  position: relative;
+}
+
+.klik-tile {
+  width: 100%;
+  aspect-ratio: 1 / 0.86;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--c, #8a7dff) 55%, transparent);
+  background:
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--c, #8a7dff) 38%, transparent), transparent 70%),
+    var(--bg-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.klik-tile:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--c, #8a7dff) 35%, transparent);
+}
+
+.klik-tile:active {
+  transform: scale(0.97);
+}
+
+.klik-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--c, #8a7dff);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.klik-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.klik-add {
+  --c: #5a6378;
+  border-style: dashed;
+}
+
+.klik-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: #e8505b;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.klik-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.klik-form input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  min-width: 0;
+}
+
+.klik-form-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.klik-form-row input {
+  flex: 1 1 140px;
+}
+
+.klik-colors {
+  display: flex;
+  gap: 5px;
+}
+
+.klik-colors button {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.klik-colors button.on {
+  border-color: #fff;
+}
+
+.klik-form > button {
+  padding: 8px;
+  border-radius: 8px;
+  border: 0;
+  background: #ff4fa3;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.klik-form > button:disabled {
+  opacity: 0.5;
+}
+
+.klik-hint {
+  margin: 0;
+}
+
+.klik-tools {
+  display: flex;
+  gap: 8px;
+}
+
+.klik-tools button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}

@@ -5,6 +5,8 @@ import { LEXA_MODEL, LEXA_SYSTEM, LEXA_TOOLS, LEXA_TOOL_LABELS, lexaContext, run
 import { apiKeyConfigured, nowText } from './config.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
 import { recordUsage } from './usage.ts';
+import { KLIK_MODEL, KLIK_SYSTEM, KLIK_TOOL_LABELS, OPEN_LINK, OPEN_LINK_TOOL, klikContext, runOpenLink, tilesText } from './klik.ts';
+import { randomUUID } from 'node:crypto';
 import { ASK_COLLEAGUE, TEAM_TOOL_LABELS, finishTask, runMemoryTool, startTask, teamContext, teamRules, teamTools } from './team.ts';
 import { BIT_MODEL, BIT_SYSTEM, BIT_TOOLS, BIT_TOOL_LABELS, bitContext, runBitTool } from './bit-chat.ts';
 import { CHRONOS_MODEL, CHRONOS_SYSTEM, CHRONOS_TOOLS, TOOL_LABELS, chronosContext, runChronosTool } from './chronos-chat.ts';
@@ -37,6 +39,7 @@ ${teamDescription()}
 
 Jak pracuješ:
 - Jsi šéf týmu. Sám nemáš kalendář, web ani zprávy – ty mají kolegové. Když požadavek potřebuje jejich schopnost, zadej jim úkol nástrojem ask_colleague (klidně víc kolegům, např. Chronos najde volný den a Lexa k němu vyhledá výlet). Jejich výsledky pak uživateli shrň a propoj dohromady.
+- Weby a aplikace (YouTube, Spotify, Google…) otevíráš sám nástrojem open_link – rychleji, než kdybys to zadával Klikovi.
 - Pošťák (e-mail) a Archivář (dokumenty) zatím nepracují – když jde o e-mail nebo soubory, řekni to na rovinu a pomoz, jak to jde (rada, návrh textu, plán).
 - Nikdy nepředstírej, že jsi něco zjistil nebo udělal. Co ti kolega nepotvrdil, nevíš.
 - Časem z tebe bude Jarvis: uživatel s tebou bude mluvit hlasem a budeš mu umět zavolat. Zatím spolu jen píšete.
@@ -95,7 +98,9 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
     system: SYSTEM_PROMPT,
     effort: 'medium',
     fallbacks: true,
-    context: async () => `Aktuální datum a čas: ${nowText()}.`,
+    context: async () => `Aktuální datum a čas: ${nowText()}.\n${await tilesText()}`,
+    tools: [OPEN_LINK_TOOL],
+    toolLabels: { [OPEN_LINK]: '▶️ Otevírám…' },
   },
   chronos: {
     name: 'Chronos',
@@ -129,6 +134,16 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
     tools: BIT_TOOLS,
     runTool: runBitTool,
     toolLabels: BIT_TOOL_LABELS,
+  },
+  klik: {
+    name: 'Klik',
+    model: KLIK_MODEL,
+    system: KLIK_SYSTEM,
+    effort: 'low',
+    fallbacks: false,
+    context: klikContext,
+    tools: [OPEN_LINK_TOOL],
+    toolLabels: KLIK_TOOL_LABELS,
   },
   echo: {
     name: 'Echo',
@@ -224,6 +239,11 @@ async function runAgent(agentId: string, messages: Anthropic.Beta.BetaMessagePar
           o.onTool?.(labels[u.name] ?? '🔧 Pracuji…');
           const mem = await runMemoryTool(agentId, u.name, input);
           if (mem !== null) return { type: 'tool_result', tool_use_id: u.id, content: mem };
+          if (u.name === OPEN_LINK) {
+            const link = await runOpenLink(input);
+            attach({ kind: 'link', id: randomUUID().slice(0, 8), title: link.title, url: link.url });
+            return { type: 'tool_result', tool_use_id: u.id, content: JSON.stringify({ otevreno: true, ...link }) };
+          }
           if (!cfg.runTool) throw new Error(`Nástroj ${u.name} tu není.`);
           const out = await cfg.runTool(u.name, input);
           if (u.name === 'create_poster') {

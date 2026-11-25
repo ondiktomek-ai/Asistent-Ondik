@@ -9,11 +9,13 @@ import { CalendarPanel } from './CalendarPanel';
 import { MaintenancePanel } from './MaintenancePanel';
 import { ResearchList } from './ResearchList';
 import { TeamPanel } from './TeamPanel';
+import { KlikPanel } from './KlikPanel';
 import type { ChatAttachment } from '../api';
 
 /** Agenti s druhou záložkou vedle chatu. */
 const SIDE_TABS: Record<string, { id: string; label: string }> = {
   ondik: { id: 'tym', label: '🧠 Paměť a tým' },
+  klik: { id: 'spoustec', label: '▶️ Spouštěč' },
   echo: { id: 'zpravy', label: '📰 Zprávy a počasí' },
   chronos: { id: 'kalendar', label: '📅 Kalendář' },
   bit: { id: 'udrzba', label: '🔧 Údržba' },
@@ -65,13 +67,17 @@ export function AgentPanel({
   onOpenResearch,
   researchRefresh,
 }: AgentPanelProps) {
-  const openAttachment = (a: ChatAttachment) => onOpenResearch(a.id);
-  const [tab, setTab] = useState<string>(initialTab ?? 'chat');
+  const openAttachment = (a: ChatAttachment) => {
+    if (a.kind === 'lexa-poster') onOpenResearch(a.id);
+  };
+  // Klik začíná rovnou dlaždicemi, ostatní chatem
+  const firstTab = (id?: string) => initialTab ?? (id === 'klik' ? 'spoustec' : 'chat');
+  const [tab, setTab] = useState<string>(firstTab(agent?.id));
   const [tabAgent, setTabAgent] = useState<string | null>(agent?.id ?? null);
   // při přepnutí na jiného agenta začni chatem (pokud není řečeno jinak)
   if ((agent?.id ?? null) !== tabAgent) {
     setTabAgent(agent?.id ?? null);
-    setTab(initialTab ?? 'chat');
+    setTab(firstTab(agent?.id));
   }
   const sideTab = agent ? SIDE_TABS[agent.id] : undefined;
   const googleOk = !!status?.google?.connected;
@@ -188,6 +194,8 @@ export function AgentPanel({
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
                 ) : agent.id === 'ondik' ? (
                   <TeamPanel serverOnline={serverOnline} />
+                ) : agent.id === 'klik' ? (
+                  <KlikPanel serverOnline={serverOnline} />
                 ) : agent.id === 'lexa' ? (
                   <ResearchList serverOnline={serverOnline} onOpen={onOpenResearch} refreshKey={researchRefresh} />
                 ) : agent.id === 'bit' ? (

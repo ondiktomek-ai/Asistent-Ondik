@@ -24,6 +24,11 @@ import {
   Microphone,
   Newspapers,
   WeatherStation,
+  BigScreen,
+  Speaker,
+  Popcorn,
+  Sofa,
+  B,
 } from './props';
 
 type V3 = [number, number, number];
@@ -52,6 +57,7 @@ export interface Interior {
  * věci musí být zřetelně před ním, jinak se se zdí „přetahují“ a blikají.
  */
 const WALL_Z = -2.3;
+const WOOD_DARK_ = '#5a3f2a';
 
 export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
   newsroom: {
@@ -163,6 +169,29 @@ export const INTERIORS: Record<Exclude<ThemeId, 'townhall'>, Interior> = {
       [2.3, 0, -0.9],
       [2.0, 0, 1.3],
       [-1.0, 0, 0.5],
+    ],
+  },
+  media: {
+    floor: '#3a2a4a',
+    wall: ({ accent }) => <BigScreen p={[1.0, 1.4, WALL_Z]} colors={['#ff2b2b', '#1ed760', '#4f8ef7', accent, '#f5b83d']} />,
+    render: ({ accent, night }) => (
+      <>
+        <Speaker p={[-0.55, 0, -2.0]} />
+        <Speaker p={[2.6, 0, -2.0]} />
+        <Rug p={[1.0, 0, -0.2]} w={2.6} d={2.0} color={accent} />
+        <B p={[1.0, 0.18, -0.55]} s={[0.9, 0.36, 0.45]} c={WOOD_DARK_} />
+        <Popcorn p={[0.8, 0.36, -0.55]} />
+        <Sofa p={[1.0, 0, 0.75]} r={Math.PI} w={2.0} color={accent} />
+        <FloorLamp p={[2.7, 0, 1.9]} on={night} />
+        <Plant p={[-0.6, 0, 1.9]} />
+      </>
+    ),
+    spots: [
+      [0.0, 0, -1.2],
+      [2.1, 0, -1.2],
+      [-1.0, 0, 0.5],
+      [2.4, 0, 1.4],
+      [0.2, 0, 1.7],
     ],
   },
   workshop: {

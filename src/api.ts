@@ -10,11 +10,7 @@ export interface ServerStatus {
   google?: { configured: boolean; connected: boolean };
 }
 
-export interface ChatAttachment {
-  kind: 'lexa-poster';
-  id: string;
-  title: string;
-}
+export type ChatAttachment = { kind: 'lexa-poster'; id: string; title: string } | { kind: 'link'; id: string; title: string; url: string };
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -358,3 +354,28 @@ export interface Briefing {
 }
 
 export const createBriefing = () => request<Briefing>('/api/jarvis/briefing', { method: 'POST' });
+
+// --- Klik: spouštěč ---
+
+import type { Tile } from './world/tiles';
+export type { Tile };
+
+export const fetchTiles = () => request<{ tiles: Tile[] }>('/api/klik/tiles');
+export const addTileApi = (t: { name: string; url: string; search?: string; icon?: string; color?: string }) => request<Tile>('/api/klik/tiles', jsonInit('POST', t));
+export const deleteTileApi = (id: string) => request<{ ok: true }>(`/api/klik/tiles/${id}`, { method: 'DELETE' });
+export const resetTilesApi = () => request<{ tiles: Tile[] }>('/api/klik/reset', { method: 'POST' });
+
+/** Městečko je otevřené přímo na počítači, kde běží server (ne z telefonu). */
+export const onServerPc = () => ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+
+/**
+ * Otevře web: na počítači ve výchozím prohlížeči (kde je uživatel přihlášený) přes server,
+ * na telefonu rovnou v telefonu. Volat přímo z kliknutí (kvůli blokování vyskakovacích oken).
+ */
+export function launch(url: string): void {
+  if (!onServerPc()) {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  request<{ ok: true }>('/api/klik/open', jsonInit('POST', { url })).catch(() => window.open(url, '_blank', 'noopener'));
+}

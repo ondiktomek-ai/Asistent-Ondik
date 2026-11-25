@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createBriefing, sendMessage, type Briefing, type BriefingSegment, type ChatAttachment, type SegmentKind } from '../api';
+import { createBriefing, launch, onServerPc, sendMessage, type Briefing, type BriefingSegment, type ChatAttachment, type SegmentKind } from '../api';
 import { JarvisOrb, type OrbState } from './JarvisOrb';
 import { Speaker, chime, czechVoices, listen, loadSettings, loadVoices, micUnavailableReason, pickVoice, saveSettings, speakable, ttsSupported, type VoiceSettings } from './speech';
 
@@ -456,20 +456,28 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
               )}
             </div>
           )}
-          {posters.map((p) => (
-            <button
-              key={p.id}
-              className="jv-card jarvis-poster"
-              onClick={() => {
-                close();
-                onOpenResearch(p.id);
-              }}
-            >
-              <div className="jv-card-head">📜 Plakátek od Lexy</div>
-              <strong>{p.title}</strong>
-              <small>Otevřít →</small>
-            </button>
-          ))}
+          {posters.map((p) =>
+            p.kind === 'link' ? (
+              <button key={p.id} className="jv-card jarvis-poster jarvis-link" onClick={() => launch(p.url)}>
+                <div className="jv-card-head">▶️ {onServerPc() ? 'Otevřeno v prohlížeči' : 'Odkaz od Klika'}</div>
+                <strong>{p.title}</strong>
+                <small>{onServerPc() ? 'Otevřít znovu →' : 'Klepni pro otevření →'}</small>
+              </button>
+            ) : (
+              <button
+                key={p.id}
+                className="jv-card jarvis-poster"
+                onClick={() => {
+                  close();
+                  onOpenResearch(p.id);
+                }}
+              >
+                <div className="jv-card-head">📜 Plakátek od Lexy</div>
+                <strong>{p.title}</strong>
+                <small>Otevřít →</small>
+              </button>
+            ),
+          )}
         </aside>
 
         <section className="jarvis-center">

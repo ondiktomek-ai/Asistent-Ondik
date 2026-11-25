@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactElement } from 'react';
-import { ApiError, clearHistory, fetchHistory, sendMessage, setToken, type ChatAttachment, type ChatMessage, type ServerStatus } from '../api';
+import { ApiError, clearHistory, fetchHistory, launch, sendMessage, setToken, type ChatAttachment, type ChatMessage, type ServerStatus } from '../api';
 import type { AgentDef } from '../world/types';
 
 interface ChatProps {
@@ -70,6 +70,7 @@ const CHAT_HINTS: Record<string, string> = {
   chronos: 'Napiš, co potřebuješ. Třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“ nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“.',
   bit: 'Zeptej se „Běží všechno?“, nebo mi řekni nápad, co v městečku vylepšit – zapíšu si ho.',
   lexa: 'Zadej mi rešerši – třeba „Porovnej tepelná čerpadla do rodinného domu“ nebo „Kam na výlet s dětmi v okolí Lipníku? Udělej z toho plakátek“.',
+  klik: 'Řekni, co otevřít – třeba „Pusť lofi na YouTube“, „Najdi na Spotify Kabát“ nebo „Vygoogli recept na svíčkovou“. Dlaždice najdeš v záložce Spouštěč.',
   echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
 };
 
@@ -129,7 +130,8 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, 
         },
         (a) => {
           made.push(a);
-          onOpenAttachment?.(a);
+          // plakátek se otevře hned; odkaz už otevřel server na počítači (na telefonu je tu tlačítko)
+          if (a.kind === 'lexa-poster') onOpenAttachment?.(a);
         },
       );
       setMessages((m) => [...m, { role: 'assistant', text: reply, at: new Date().toISOString(), ...(made.length ? { attachments: [...made] } : {}) }]);
@@ -211,8 +213,8 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, 
           <div key={i} className={`msg msg-${m.role}`}>
             {m.role === 'assistant' ? <RichText text={m.text} /> : m.text}
             {m.attachments?.map((a) => (
-              <button key={a.id} className="chat-attachment" onClick={() => onOpenAttachment?.(a)}>
-                📜 {a.title}
+              <button key={a.id} className={`chat-attachment${a.kind === 'link' ? ' link' : ''}`} onClick={() => (a.kind === 'link' ? launch(a.url) : onOpenAttachment?.(a))}>
+                {a.kind === 'link' ? '▶' : '📜'} {a.title}
               </button>
             ))}
           </div>

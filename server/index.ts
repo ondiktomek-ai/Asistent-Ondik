@@ -12,6 +12,7 @@ import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, save
 import { agenda } from './calendar.ts';
 import { deletePoster, getPoster, listPosters } from './lexa.ts';
 import { getSpend } from './usage.ts';
+import { addTile, deleteTile, listTiles, openOnPc, resetTiles, safeUrl } from './klik.ts';
 import { createBriefing, voiceContext } from './jarvis.ts';
 import { activeTasks, addMemory, deleteMemory, listMemory, teamLog, type MemoryKind } from './team.ts';
 import { addIdea, deleteIdea, getReport, listIdeas, startMaintenance, updateIdea } from './bit.ts';
@@ -60,6 +61,12 @@ async function readBody(req: IncomingMessage, limit = 64 * 1024): Promise<unknow
     chunks.push(chunk as Buffer);
   }
   return chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
+}
+
+/** Požadavek přišel z tohoto počítače (ne z telefonu v síti). */
+function isLocal(req: IncomingMessage): boolean {
+  const a = req.socket.remoteAddress ?? '';
+  return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
 }
 
 function errorMessage(err: unknown): string {
@@ -151,6 +158,35 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     }
     const p = await getPoster(lp[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: 'Plakátek nenalezen.' });
+  }
+
+  // --- Klik: spouštěč webů ---
+  if (url.pathname === '/api/klik/tiles') {
+    if (req.method === 'POST') {
+      try {
+        return json(res, 200, await addTile((await readBody(req)) as Record<string, string>));
+      } catch (err) {
+        return json(res, 400, { error: errorMessage(err) });
+      }
+    }
+    return json(res, 200, { tiles: await listTiles() });
+  }
+  if (url.pathname === '/api/klik/reset' && req.method === 'POST') return json(res, 200, { tiles: await resetTiles() });
+  const kt = url.pathname.match(/^\/api\/klik\/tiles\/([a-z0-9-]+)$/);
+  if (kt && req.method === 'DELETE') {
+    await deleteTile(kt[1]);
+    return json(res, 200, { ok: true });
+  }
+  // Otevření v prohlížeči počítače – jen z tohoto počítače (telefon si odkaz otevře sám).
+  if (url.pathname === '/api/klik/open' && req.method === 'POST') {
+    if (!isLocal(req)) return json(res, 403, { error: 'Otevírat na počítači jde jen z počítače.' });
+    try {
+      const body = (await readBody(req)) as { url?: string };
+      openOnPc(safeUrl(String(body.url ?? '')));
+      return json(res, 200, { ok: true });
+    } catch (err) {
+      return json(res, 400, { error: errorMessage(err) });
+    }
   }
 
   // --- Jarvis: mluvené hlášení ---
@@ -275,7 +311,17 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
   });
   try {
     await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), onTool: (label) => send('tool', { label }),
-      onAttachment: (a) => send('attachment', a),
+      onAttachment: (a) => {
+        // odkaz od agenta: když píšeš z počítače, rovnou se otevře v prohlížeči
+        if (a.kind === 'link' && isLocal(req)) {
+          try {
+            openOnPc(a.url);
+          } catch (err) {
+            console.warn('[klik]', err);
+          }
+        }
+        send('attachment', a);
+      },
       signal: abort.signal,
       extraContext,
     });
