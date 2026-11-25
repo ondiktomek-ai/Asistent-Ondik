@@ -1,4 +1,4 @@
-import type { BitReport, CalEvent, Digest } from '../api';
+import type { BitReport, CalEvent, Digest, SpendSummary, TeamTask } from '../api';
 import type { Newsroom } from '../hooks/useNewsroom';
 import { AGENT_BY_ID } from '../world/agents';
 import { deg, hhmm, pragueMs } from '../format';
@@ -23,6 +23,10 @@ interface InfoPanelProps {
   calendarConnected: boolean;
   bitReport: BitReport | null;
   lastResearch: { id: string; title: string } | null;
+  /** Úkoly, které si agenti právě zadali mezi sebou. */
+  teamActive: TeamTask[];
+  /** Odhad útraty za Claude API. */
+  spend: SpendSummary | null;
   onSelect: (id: string) => void;
   onOpenPoster: () => void;
   onOpenResearch: (id: string) => void;
@@ -37,14 +41,17 @@ export function InfoPanel(p: InfoPanelProps) {
   const today = w?.daily[0];
   const ymd = todayYmd(time);
 
-  // Právě teď: kdo pracuje + život v městečku
-  const working = [...p.busy].map((id) => {
+  // Právě teď: kdo komu zadal úkol, kdo pracuje, život v městečku
+  const name = (id: string) => AGENT_BY_ID[id]?.name ?? id;
+  const handoffs = p.teamActive.map((t) => ({ id: t.to, icon: '🤝', text: `${name(t.from)} → ${name(t.to)}: ${t.task.length > 70 ? t.task.slice(0, 70) + '…' : t.task}` }));
+  const delegated = new Set(p.teamActive.map((t) => t.to));
+  const working = [...p.busy].filter((id) => !delegated.has(id)).map((id) => {
     const a = AGENT_BY_ID[id];
     const label = (p.busyLabels[id] ?? '💭 Přemýšlí…').replace(/^(\S+)\s+/, '');
     const icon = (p.busyLabels[id] ?? '💭').split(' ')[0];
     return { id, icon, text: `${a?.name ?? id}: ${label}` };
   });
-  const now = [...working, ...p.town];
+  const now = [...handoffs, ...working, ...p.town];
 
   // Dnes na práci: zbývající dnešní události
   const remaining = p.events
@@ -130,6 +137,31 @@ export function InfoPanel(p: InfoPanelProps) {
           </section>
         )}
 
+        {p.serverOnline && p.spend && (
+          <section>
+            <h3>Útrata za Claude</h3>
+            <button className="info-spend" onClick={() => p.onSelect('bit')} title="Odhad podle ceníku. Přesná čísla: Claude Console → Usage / Cost">
+              <span>
+                <small>dnes</small>
+                <strong>{czk(p.spend.today.czk)}</strong>
+              </span>
+              <span>
+                <small>tento měsíc</small>
+                <strong>{czk(p.spend.month.czk)}</strong>
+              </span>
+              <SpendBars days={p.spend.days} />
+            </button>
+            {p.spend.byAgent.length > 0 && (
+              <p className="info-next">
+                {p.spend.byAgent
+                  .slice(0, 4)
+                  .map((a) => `${AGENT_BY_ID[a.id]?.icon ?? '🤖'} ${czk(a.czk)}`)
+                  .join(' · ')}
+              </p>
+            )}
+          </section>
+        )}
+
         {(latest || p.lastResearch) && (
           <section>
             <h3>Plakátky</h3>
@@ -149,5 +181,19 @@ export function InfoPanel(p: InfoPanelProps) {
         )}
       </div>
     </aside>
+  );
+}
+
+const czk = (v: number) => `${v < 10 ? v.toFixed(2).replace('.', ',') : Math.round(v)} Kč`;
+
+/** Malý sloupcový graf útraty za posledních 14 dní. */
+function SpendBars({ days }: { days: { date: string; czk: number }[] }) {
+  const max = Math.max(...days.map((d) => d.czk), 0.01);
+  return (
+    <span className="spend-bars" aria-hidden>
+      {days.map((d) => (
+        <i key={d.date} style={{ height: `${Math.max(6, (d.czk / max) * 100)}%` }} title={`${d.date}: ${czk(d.czk)}`} />
+      ))}
+    </span>
   );
 }

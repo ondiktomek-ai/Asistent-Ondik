@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBitStatus,
+  fetchTeam,
+  fetchUsage,
+  type SpendSummary,
+  type TeamTask,
   fetchDigest,
   fetchResearchPoster,
   fetchResearchPosters,
@@ -74,11 +78,38 @@ export default function App() {
   // --- Echo: zprávy, počasí, plakátky ---
   const serverOnline = !!status && (!status.authRequired || status.authorized);
   const newsroom = useNewsroom(serverOnline);
+  // --- Tým: kdo komu zadal úkol, útrata ---
+  const [teamActive, setTeamActive] = useState<TeamTask[]>([]);
+  const [spend, setSpend] = useState<SpendSummary | null>(null);
+  const anyBusy = busy.size > 0 || teamActive.length > 0;
+  useEffect(() => {
+    if (!serverOnline) return;
+    // rychleji, když někdo pracuje (ať je vidět, kdo komu zadal úkol)
+    const load = () =>
+      fetchTeam()
+        .then((r) => setTeamActive(r.active))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, anyBusy ? 2500 : 15_000);
+    return () => clearInterval(t);
+  }, [serverOnline, anyBusy]);
+  useEffect(() => {
+    if (!serverOnline) return;
+    const load = () =>
+      fetchUsage()
+        .then(setSpend)
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, [serverOnline, busy.size, teamActive.length]);
+
   const allBusy = useMemo(() => {
     const s = new Set(busy);
     if (newsroom.digests?.generating) s.add('echo');
+    teamActive.forEach((t) => s.add(t.to));
     return s;
-  }, [busy, newsroom.digests?.generating]);
+  }, [busy, newsroom.digests?.generating, teamActive]);
   // co agent právě dělá v chatu (např. „Dívám se do kalendáře…“) – ukáže se v bublině nad robotem
   const [activity, setActivity] = useState<Record<string, string>>({});
   const onActivity = useCallback((agentId: string, label: string | null) => {
@@ -92,8 +123,9 @@ export default function App() {
   const busyLabels = useMemo<Record<string, string>>(() => {
     const labels: Record<string, string> = { ...activity };
     if (newsroom.digests?.generating) labels.echo = '📰 Píšu plakátek…';
+    for (const t of teamActive) labels[t.to] ??= `🤝 Úkol od: ${AGENT_BY_ID[t.from]?.name ?? t.from}`;
     return labels;
-  }, [activity, newsroom.digests?.generating]);
+  }, [activity, newsroom.digests?.generating, teamActive]);
 
   // --- Chronos: návrat z přihlášení Googlu (?kalendar=ok / chyba) ---
   const [calendarNotice, setCalendarNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -351,6 +383,8 @@ export default function App() {
           calendarConnected={!!status?.google?.connected}
           bitReport={bitReport}
           lastResearch={lastResearch}
+          teamActive={teamActive}
+          spend={spend}
           onSelect={setSelectedId}
           onOpenPoster={() => openPoster()}
           onOpenResearch={openResearch}

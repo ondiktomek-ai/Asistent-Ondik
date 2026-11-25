@@ -4,6 +4,8 @@ import { loadConversation, saveConversation, type ChatAttachment, type DisplayMe
 import { LEXA_MODEL, LEXA_SYSTEM, LEXA_TOOLS, LEXA_TOOL_LABELS, lexaContext, runLexaTool } from './lexa.ts';
 import { apiKeyConfigured, nowText } from './config.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
+import { recordUsage } from './usage.ts';
+import { ASK_COLLEAGUE, TEAM_TOOL_LABELS, finishTask, runMemoryTool, startTask, teamContext, teamRules, teamTools } from './team.ts';
 import { BIT_MODEL, BIT_SYSTEM, BIT_TOOLS, BIT_TOOL_LABELS, bitContext, runBitTool } from './bit-chat.ts';
 import { CHRONOS_MODEL, CHRONOS_SYSTEM, CHRONOS_TOOLS, TOOL_LABELS, chronosContext, runChronosTool } from './chronos-chat.ts';
 
@@ -34,9 +36,10 @@ Tvůj tým (roboti v boxech kolem radnice, kde bydlí i pracují):
 ${teamDescription()}
 
 Jak pracuješ:
+- Jsi šéf týmu. Sám nemáš kalendář, web ani zprávy – ty mají kolegové. Když požadavek potřebuje jejich schopnost, zadej jim úkol nástrojem ask_colleague (klidně víc kolegům, např. Chronos najde volný den a Lexa k němu vyhledá výlet). Jejich výsledky pak uživateli shrň a propoj dohromady.
+- Pošťák (e-mail) a Archivář (dokumenty) zatím nepracují – když jde o e-mail nebo soubory, řekni to na rovinu a pomoz, jak to jde (rada, návrh textu, plán).
+- Nikdy nepředstírej, že jsi něco zjistil nebo udělal. Co ti kolega nepotvrdil, nevíš.
 - Časem z tebe bude Jarvis: uživatel s tebou bude mluvit hlasem a budeš mu umět zavolat. Zatím spolu jen píšete.
-- Přijímáš požadavky uživatele. Až budou kolegové připojení, budeš jim práci předávat; teď zatím nikdo z týmu není napojený na skutečné nástroje.
-- Buď poctivý: nemáš zatím přístup k e-mailu, kalendáři, webu ani souborům. Nepředstírej, že jsi něco zjistil nebo udělal. Když požadavek potřebuje nástroj, řekni, který kolega to bude mít na starosti, a pomoz, jak to jde už teď (rada, návrh textu, plán, připomenutí, co je potřeba připravit).
 - Odpovídej stručně, uživatel tě často čte na telefonu. Používej krátké odstavce, případně jednoduché odrážky začínající „- “. Nepoužívej nadpisy ani tabulky.
 - V konverzaci dostáváš systémové zprávy s aktuálním datem a časem; počítej s nimi.`;
 
@@ -135,6 +138,142 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
   },
 };
 
+interface RunOptions {
+  /** 0 = rozhovor s uživatelem, 1 = úkol od kolegy (ten už další kolegy nezapojuje) */
+  depth: number;
+  onText?: (delta: string) => void;
+  onTool?: (label: string) => void;
+  onAttachment?: (a: ChatAttachment) => void;
+  signal: AbortSignal;
+}
+
+const agentName = (id: string) => CHAT_AGENTS[id]?.name ?? id;
+
+/** Jedno „kolo práce“ agenta: volá Claude, provádí nástroje, dokud agent neodpoví. Zprávy doplňuje do `messages`. */
+async function runAgent(agentId: string, messages: Anthropic.Beta.BetaMessageParam[], o: RunOptions): Promise<{ reply: string; attachments: ChatAttachment[] }> {
+  const cfg = CHAT_AGENTS[agentId];
+  const canAsk = o.depth === 0;
+  const tools = [...(cfg.tools ?? []), ...teamTools(agentId, canAsk)];
+  const system = cfg.system + teamRules(agentId, canAsk);
+  const labels = { ...TEAM_TOOL_LABELS, ...cfg.toolLabels };
+
+  let reply = '';
+  let newRound = false;
+  const attachments: ChatAttachment[] = [];
+  const attach = (a: ChatAttachment) => {
+    attachments.push(a);
+    o.onAttachment?.(a);
+  };
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const stream = getClient().beta.messages.stream(
+      {
+        model: cfg.model,
+        max_tokens: 16000,
+        system,
+        cache_control: { type: 'ephemeral' },
+        output_config: { effort: cfg.effort },
+        // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
+        ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
+        tools,
+        messages,
+      },
+      { signal: o.signal },
+    );
+    stream.on('text', (t) => {
+      // text z dalšího kola (po použití nástroje) oddělíme odstavcem
+      if (newRound && reply && !reply.endsWith('\n')) {
+        reply += '\n\n';
+        o.onText?.('\n\n');
+      }
+      newRound = false;
+      reply += t;
+      o.onText?.(t);
+    });
+    // vestavěné nástroje (hledání na webu) běží u Claude – ukážeme aspoň, že se hledá
+    stream.on('streamEvent', (ev) => {
+      if (ev.type === 'content_block_start' && ev.content_block.type === 'server_tool_use') {
+        o.onTool?.(labels[ev.content_block.name] ?? '🔎 Hledám…');
+      }
+    });
+    const final = await stream.finalMessage();
+    recordUsage(agentId, final.model || cfg.model, final.usage);
+
+    if (final.stop_reason === 'refusal') throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
+    if (final.stop_reason === 'max_tokens') throw new Error('Odpověď se nevešla do limitu, zkus otázku zjednodušit.');
+    messages.push({ role: 'assistant', content: final.content });
+    // dlouhé hledání na webu Claude přeruší „pause_turn“ – pošleme to samé znovu a on pokračuje
+    if (final.stop_reason === 'pause_turn') {
+      newRound = true;
+      continue;
+    }
+    if (final.stop_reason !== 'tool_use') break;
+
+    // všechny požadované nástroje najednou (např. dva kolegové pracují souběžně), výsledky v jedné zprávě
+    const uses = final.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use');
+    const results = await Promise.all(
+      uses.map(async (u): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
+        const input = (u.input ?? {}) as Record<string, unknown>;
+        try {
+          if (u.name === ASK_COLLEAGUE) {
+            const out = await askColleague(agentId, String(input.agent ?? ''), String(input.task ?? ''), { ...o, onAttachment: attach });
+            return { type: 'tool_result', tool_use_id: u.id, content: out };
+          }
+          o.onTool?.(labels[u.name] ?? '🔧 Pracuji…');
+          const mem = await runMemoryTool(agentId, u.name, input);
+          if (mem !== null) return { type: 'tool_result', tool_use_id: u.id, content: mem };
+          if (!cfg.runTool) throw new Error(`Nástroj ${u.name} tu není.`);
+          const out = await cfg.runTool(u.name, input);
+          if (u.name === 'create_poster') {
+            const r = JSON.parse(out) as { id: string; titulek: string };
+            attach({ kind: 'lexa-poster', id: r.id, title: r.titulek });
+          }
+          return { type: 'tool_result', tool_use_id: u.id, content: out };
+        } catch (err) {
+          if (o.signal.aborted) throw err;
+          return { type: 'tool_result', tool_use_id: u.id, content: err instanceof Error ? err.message : String(err), is_error: true };
+        }
+      }),
+    );
+    messages.push({ role: 'user', content: results });
+    newRound = true;
+  }
+  return { reply, attachments };
+}
+
+/** Agent zadá úkol kolegovi: kolega ho zpracuje se svými nástroji (bez historie chatu) a vrátí odpověď. */
+async function askColleague(fromId: string, toId: string, task: string, o: RunOptions): Promise<string> {
+  if (!CHAT_AGENTS[toId] || toId === fromId) throw new Error(`Kolega „${toId}“ neexistuje.`);
+  if (!task.trim()) throw new Error('Chybí zadání úkolu.');
+  o.onTool?.(`🤝 Zadávám úkol: ${agentName(toId)}…`);
+  const t = startTask(fromId, toId, task);
+  try {
+    const messages: Anthropic.Beta.BetaMessageParam[] = [
+      { role: 'user', content: `Úkol od kolegy ${agentName(fromId)}:\n${task}` },
+      { role: 'system', content: `${await CHAT_AGENTS[toId].context()}\n\n${await teamContext()}` },
+    ];
+    const { reply } = await runAgent(toId, messages, {
+      depth: o.depth + 1,
+      signal: o.signal,
+      onAttachment: o.onAttachment,
+      // „🔎 Hledám na webu…“ → „🔎 Lexa: Hledám na webu…“
+      onTool: (label) => {
+        const [icon, ...rest] = label.split(' ');
+        o.onTool?.(rest.length ? `${icon} ${agentName(toId)}: ${rest.join(' ')}` : `${agentName(toId)}: ${label}`);
+      },
+    });
+    const text = reply.trim() || '(kolega neodpověděl textem)';
+    finishTask(t, true, text);
+    o.onTool?.(`💭 ${agentName(fromId)} skládá odpověď…`);
+    return `${agentName(toId)} odpovídá:\n${text}`;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    finishTask(t, false, msg);
+    if (o.signal.aborted) throw err;
+    throw new Error(`${agentName(toId)} úkol nezvládl: ${msg}`);
+  }
+}
+
 /** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
 export async function chatWithAgent(agentId: string, text: string, { onText, onTool, onAttachment, signal }: ChatHandlers): Promise<string> {
   const cfg = CHAT_AGENTS[agentId];
@@ -147,77 +286,9 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
     const messages: Anthropic.Beta.BetaMessageParam[] = [
       ...conv.api,
       { role: 'user', content: text },
-      { role: 'system', content: await cfg.context() },
+      { role: 'system', content: `${await cfg.context()}\n\n${await teamContext()}` },
     ];
-
-    let reply = '';
-    let newRound = false;
-    const attachments: ChatAttachment[] = [];
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const stream = getClient().beta.messages.stream(
-        {
-          model: cfg.model,
-          max_tokens: 16000,
-          system: cfg.system,
-          cache_control: { type: 'ephemeral' },
-          output_config: { effort: cfg.effort },
-          // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
-          ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
-          ...(cfg.tools ? { tools: cfg.tools } : {}),
-          messages,
-        },
-        { signal },
-      );
-      stream.on('text', (t) => {
-        // text z dalšího kola (po použití nástroje) oddělíme odstavcem
-        if (newRound && reply && !reply.endsWith('\n')) {
-          reply += '\n\n';
-          onText('\n\n');
-        }
-        newRound = false;
-        reply += t;
-        onText(t);
-      });
-      // vestavěné nástroje (hledání na webu) běží u Claude – ukážeme aspoň, že se hledá
-      stream.on('streamEvent', (ev) => {
-        if (ev.type === 'content_block_start' && ev.content_block.type === 'server_tool_use') {
-          onTool?.(cfg.toolLabels?.[ev.content_block.name] ?? '🔎 Hledám…');
-        }
-      });
-      const final = await stream.finalMessage();
-
-      if (final.stop_reason === 'refusal') throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
-      if (final.stop_reason === 'max_tokens') throw new Error('Odpověď se nevešla do limitu, zkus otázku zjednodušit.');
-      messages.push({ role: 'assistant', content: final.content });
-      // dlouhé hledání na webu Claude přeruší „pause_turn“ – pošleme to samé znovu a on pokračuje
-      if (final.stop_reason === 'pause_turn') {
-        newRound = true;
-        continue;
-      }
-      if (final.stop_reason !== 'tool_use' || !cfg.runTool) break;
-
-      // provedeme všechny požadované nástroje a výsledky vrátíme v jedné zprávě
-      const uses = final.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use');
-      const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
-      for (const u of uses) {
-        onTool?.(cfg.toolLabels?.[u.name] ?? '🔧 Pracuji…');
-        try {
-          const out = await cfg.runTool(u.name, (u.input ?? {}) as Record<string, unknown>);
-          results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
-          if (u.name === 'create_poster') {
-            const r = JSON.parse(out) as { id: string; titulek: string };
-            const a: ChatAttachment = { kind: 'lexa-poster', id: r.id, title: r.titulek };
-            attachments.push(a);
-            onAttachment?.(a);
-          }
-        } catch (err) {
-          results.push({ type: 'tool_result', tool_use_id: u.id, content: err instanceof Error ? err.message : String(err), is_error: true });
-        }
-      }
-      messages.push({ role: 'user', content: results });
-      newRound = true;
-    }
-
+    const { reply, attachments } = await runAgent(agentId, messages, { depth: 0, onText, onTool, onAttachment, signal });
     const at = new Date().toISOString();
     await saveConversation(agentId, {
       api: messages,

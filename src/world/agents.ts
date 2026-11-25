@@ -2,8 +2,7 @@ import type { AgentDef } from './types';
 
 /**
  * Seznam agentů v kanceláři.
- * Zatím jde jen o „obsazení“ světa – nástroje jsou ve stavu `planned`
- * a skutečné napojení přijde v další fázi.
+ * Nástroje ve stavu `planned` teprve přijdou.
  */
 export const AGENTS: AgentDef[] = [
   {
@@ -16,16 +15,16 @@ export const AGENTS: AgentDef[] = [
     theme: 'townhall',
     status: 'setup',
     description:
-      'Tvůj hlavní asistent. Sídlí na radnici hned vedle tebe, přijímá požadavky, rozhoduje, který agent se jich ujme, a hlídá, aby se na nic nezapomnělo. Časem z něj bude Jarvis – asistent, se kterým budeš mluvit hlasem a který ti umí zavolat.',
+      'Tvůj hlavní asistent a šéf týmu. Sídlí na radnici hned vedle tebe, přijímá požadavky a rozdělí je kolegům – Chronos zjistí termíny, Lexa udělá rešerši, Echo zprávy – a výsledky ti shrne dohromady. Časem z něj bude Jarvis – asistent, se kterým budeš mluvit hlasem a který ti umí zavolat.',
     duties: [
-      'Přijímá tvoje požadavky (chat, hlas, zprávy)',
-      'Deleguje práci ostatním agentům',
-      'Každé ráno připraví přehled dne',
-      'Pamatuje si tvoje preference',
+      'Přijímá tvoje požadavky a rozděluje je týmu',
+      'Spojuje výsledky kolegů do jedné odpovědi',
+      'Vede společnou paměť týmu (co o tobě všichni vědí)',
+      'Každé ráno připraví přehled dne (brzy)',
     ],
     tools: [
-      { name: 'Delegování', description: 'Předávání úkolů ostatním agentům', status: 'planned' },
-      { name: 'Paměť', description: 'Dlouhodobá paměť o tobě a tvých zvyklostech', status: 'planned' },
+      { name: 'Delegování', description: 'Zadává úkoly kolegům a čeká na jejich výsledky', status: 'connected' },
+      { name: 'Společná paměť', description: 'Co si tým pamatuje o tobě, tvých zvyklostech a projektech', status: 'connected' },
       { name: 'Notifikace', description: 'Upozornění do telefonu', status: 'planned' },
       { name: 'Hlas (Jarvis)', description: 'Mluvený rozhovor místo psaní', status: 'planned' },
       { name: 'Telefonní hovory (Jarvis)', description: 'Zavolá ti, když je něco důležitého', status: 'planned' },

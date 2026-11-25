@@ -11,6 +11,8 @@ import { getWeather } from './weather.ts';
 import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, saveClient } from './google.ts';
 import { agenda } from './calendar.ts';
 import { deletePoster, getPoster, listPosters } from './lexa.ts';
+import { getSpend } from './usage.ts';
+import { activeTasks, addMemory, deleteMemory, listMemory, teamLog, type MemoryKind } from './team.ts';
 import { addIdea, deleteIdea, getReport, listIdeas, startMaintenance, updateIdea } from './bit.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -149,6 +151,24 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     const p = await getPoster(lp[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: 'Plakátek nenalezen.' });
   }
+
+  // --- Tým: útrata, společná paměť, spolupráce ---
+  if (url.pathname === '/api/usage') return json(res, 200, await getSpend());
+  if (url.pathname === '/api/team') return json(res, 200, { active: activeTasks(), log: await teamLog(url.searchParams.has('vse') ? 60 : 15) });
+  if (url.pathname === '/api/memory') {
+    if (req.method === 'POST') {
+      try {
+        const body = (await readBody(req)) as { text?: string; kind?: string };
+        const kind = (['uzivatel', 'preference', 'projekt', 'ukol', 'jine'] as const).includes(body.kind as MemoryKind) ? (body.kind as MemoryKind) : 'jine';
+        return json(res, 200, await addMemory(String(body.text ?? ''), kind, 'ty'));
+      } catch (err) {
+        return json(res, 400, { error: errorMessage(err) });
+      }
+    }
+    return json(res, 200, { items: await listMemory() });
+  }
+  const mm = url.pathname.match(/^\/api\/memory\/([a-z0-9-]+)$/);
+  if (mm && req.method === 'DELETE') return json(res, 200, { ok: await deleteMemory(mm[1]) });
 
   // --- Bit: údržba a nápady ---
   if (url.pathname === '/api/bit/status') return json(res, 200, await getReport(url.searchParams.has('ted')));

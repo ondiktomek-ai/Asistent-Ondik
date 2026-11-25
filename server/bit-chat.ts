@@ -3,6 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { AGENTS } from '../src/world/agents.ts';
 import { addIdea, getReport, listIdeas, updateIdea, type CheckState } from './bit.ts';
 import { nowText } from './config.ts';
+import { spendText } from './usage.ts';
 
 export const BIT_MODEL = process.env.BIT_MODEL || 'claude-haiku-5-5';
 
@@ -15,7 +16,7 @@ Tým:
 ${TEAM}
 
 Tvoje práce:
-1. Hlídáš, že všechno běží: Claude API klíč, zdroje zpráv a plakátky (Echo), počasí, Google Kalendář (Chronos), data a server. Stav zjistíš nástrojem system_status. Když něco nejde, vysvětli srozumitelně, co to znamená a co má uživatel udělat (krok za krokem, bez žargonu).
+1. Hlídáš útratu za Claude API (odhad je v podkladech; přesná čísla má uživatel v Claude Console → Usage / Cost) a hlídáš, že všechno běží: Claude API klíč, zdroje zpráv a plakátky (Echo), počasí, Google Kalendář (Chronos), data a server. Stav zjistíš nástrojem system_status. Když něco nejde, vysvětli srozumitelně, co to znamená a co má uživatel udělat (krok za krokem, bez žargonu).
 2. Připomínáš přihlášení ke Googlu: aplikace je v testovacím režimu, takže přihlášení platí 7 dní. Když se blíží konec, připomeň, ať se přihlásí znovu (u Chronose v záložce Kalendář, nebo tlačítkem v upozornění).
 3. Vedeš seznam vylepšení městečka. Když uživatel řekne nápad nebo přání, zapiš ho (add_idea, from = "ty") a krátce shrň, jak bys ho pochopil. Když se tě zeptá, co vylepšit, navrhni 2–3 konkrétní věci podle stavu a seznamu, a zapiš je, jen když souhlasí (from = "bit"). Priority a stavy měň přes update_idea.
 - Kód městečka sám neměníš. Nápady z tvého seznamu uživatel vezme k programátorovi (Claude Code) – můžeš mu k tomu připravit stručné zadání.
@@ -113,6 +114,7 @@ export async function bitContext(): Promise<string> {
     `Aktuální datum a čas: ${nowText()}.`,
     `Poslední kontrola (${new Date(r.checkedAt).toLocaleTimeString('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' })}):`,
     ...r.checks.map((c) => `- ${c.name}: ${STATE_WORD[c.state]} – ${c.detail}`),
+    await spendText(),
     `Otevřené nápady: ${ideas.length}${ideas.length ? ` (${ideas.slice(0, 5).map((i) => i.title).join('; ')})` : ''}.`,
   ].join('\n');
 }

@@ -2524,3 +2524,188 @@ button {
     transform: translateX(-50%);
   }
 }
+
+/* ---------- Útrata v informačním panelu ---------- */
+.info-spend {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.info-spend > span:not(.spend-bars) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.info-spend small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.info-spend strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spend-bars {
+  flex: 1;
+  height: 28px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.spend-bars i {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: #5fae8c;
+  opacity: 0.75;
+}
+
+.spend-bars i:last-child {
+  opacity: 1;
+  background: #7fd3ad;
+}
+
+/* ---------- Ondik: paměť a tým ---------- */
+.team-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.team-panel h3 {
+  margin: 0 0 6px;
+}
+
+.memory-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.memory-add input {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: inherit;
+  font: inherit;
+}
+
+.memory-add select {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: inherit;
+  font: inherit;
+}
+
+.memory-add button {
+  padding: 7px 14px;
+  border-radius: 9px;
+  border: 0;
+  background: #f5b83d;
+  color: #1b1b1b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.memory-add button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.memory-list,
+.team-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memory-list li {
+  display: flex;
+  gap: 6px;
+}
+
+.memory-list li > div {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.memory-list p {
+  margin: 3px 0;
+  font-size: 13.5px;
+}
+
+.memory-kind {
+  font-size: 11px;
+  color: #f5b83d;
+}
+
+.memory-list small,
+.team-task small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.team-task {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.team-task.bezi {
+  border-color: #f5b83d;
+}
+
+.team-task.chyba {
+  border-color: #e8505b;
+}
+
+.team-task-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.team-task-text {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #c5cde0;
+}
+
+.team-task details {
+  margin-top: 4px;
+  font-size: 12.5px;
+}
+
+.team-task details p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}

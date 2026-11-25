@@ -8,10 +8,12 @@ import { ReporterPanel } from './ReporterPanel';
 import { CalendarPanel } from './CalendarPanel';
 import { MaintenancePanel } from './MaintenancePanel';
 import { ResearchList } from './ResearchList';
+import { TeamPanel } from './TeamPanel';
 import type { ChatAttachment } from '../api';
 
 /** Agenti s druhou záložkou vedle chatu. */
 const SIDE_TABS: Record<string, { id: string; label: string }> = {
+  ondik: { id: 'tym', label: '🧠 Paměť a tým' },
   echo: { id: 'zpravy', label: '📰 Zprávy a počasí' },
   chronos: { id: 'kalendar', label: '📅 Kalendář' },
   bit: { id: 'udrzba', label: '🔧 Údržba' },
@@ -184,6 +186,8 @@ export function AgentPanel({
                   />
                 ) : agent.id === 'echo' ? (
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                ) : agent.id === 'ondik' ? (
+                  <TeamPanel serverOnline={serverOnline} />
                 ) : agent.id === 'lexa' ? (
                   <ResearchList serverOnline={serverOnline} onOpen={onOpenResearch} refreshKey={researchRefresh} />
                 ) : agent.id === 'bit' ? (

@@ -297,3 +297,40 @@ export interface ResearchPoster {
 export const fetchResearchPosters = () => request<{ posters: { id: string; createdAt: string; title: string; topic: string }[] }>('/api/lexa/posters');
 export const fetchResearchPoster = (id: string) => request<ResearchPoster>(`/api/lexa/posters/${id}`);
 export const deleteResearchPoster = (id: string) => request<{ ok: true }>(`/api/lexa/posters/${id}`, { method: 'DELETE' });
+
+// --- Tým: útrata, společná paměť, spolupráce ---
+
+export interface SpendSummary {
+  today: { usd: number; czk: number; calls: number };
+  month: { usd: number; czk: number; calls: number };
+  byAgent: { id: string; usd: number; czk: number; calls: number; searches: number }[];
+  days: { date: string; czk: number }[];
+  rate: number;
+}
+
+export type MemoryKind = 'uzivatel' | 'preference' | 'projekt' | 'ukol' | 'jine';
+
+export interface MemoryItem {
+  id: string;
+  text: string;
+  kind: MemoryKind;
+  by: string;
+  at: string;
+}
+
+export interface TeamTask {
+  id: string;
+  from: string;
+  to: string;
+  task: string;
+  state: 'bezi' | 'hotovo' | 'chyba';
+  result?: string;
+  at: string;
+  doneAt?: string;
+}
+
+export const fetchUsage = () => request<SpendSummary>('/api/usage');
+export const fetchTeam = (all = false) => request<{ active: TeamTask[]; log: TeamTask[] }>(`/api/team${all ? '?vse' : ''}`);
+export const fetchMemory = () => request<{ items: MemoryItem[] }>('/api/memory');
+export const addMemoryApi = (text: string, kind: MemoryKind) => request<MemoryItem>('/api/memory', jsonInit('POST', { text, kind }));
+export const deleteMemoryApi = (id: string) => request<{ ok: boolean }>(`/api/memory/${id}`, { method: 'DELETE' });

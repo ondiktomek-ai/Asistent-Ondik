@@ -3,6 +3,7 @@
  * sepíše plakátek se souhrnem toho, co se stalo, a s vývojem počasí.
  */
 import { randomUUID } from 'node:crypto';
+import { recordUsage } from './usage.ts';
 import Anthropic from '@anthropic-ai/sdk';
 import { latestNews, newsSince, pollNews, type NewsItem } from './news.ts';
 import { getWeather, weatherSentence, type Weather } from './weather.ts';
@@ -130,6 +131,7 @@ async function aiDigest(items: NewsItem[], weather: Weather | null) {
       },
     ],
   });
+  recordUsage('echo', res.model || REPORTER_MODEL, res.usage);
   if (res.stop_reason === 'refusal') throw new Error('Model souhrn odmítl napsat.');
   if (res.stop_reason === 'max_tokens') throw new Error('Souhrn se nevešel do limitu.');
   const textBlock = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text');

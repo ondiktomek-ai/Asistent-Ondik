@@ -84,6 +84,24 @@ každý řekne, jak na tom je, a pak se rozejdou. Když agent pracuje (chat, pla
 Logika je v `src/world3d/TownLife.tsx` (plánování činností a cest), geometrie cest a stánků
 v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí čas.
 
+## Tým: spolupráce a společná paměť
+
+- **Ondik je šéf týmu.** Když požadavek potřebuje kolegu, zadá mu úkol (nástroj `ask_colleague`)
+  a výsledky spojí do jedné odpovědi – např. „Najdi mi tento týden volný večer a tip na výlet“
+  → Chronos najde termín, Lexa výlet (i s plakátkem). Úkoly může zadávat každý agent, kterému
+  píšeš; kolega, který úkol dostal, už další kolegy nezapojuje (žádné nekonečné řetězy).
+- **Společná paměť** (`data/pamet.json`): co se agenti dozvědí a bude se hodit i příště, zapíšou
+  jednou větou; celý tým ji vidí u každé otázky. Najdeš ji u Ondika v záložce *🧠 Paměť a tým* –
+  můžeš tam přidat vlastní poznámku nebo cokoli smazat. Tamtéž je deník spolupráce (kdo komu co zadal a co odpověděl).
+- Kdo zrovna pro koho pracuje, ukazuje informační panel (*Právě teď*) i bublina nad robotem.
+
+## Útrata
+
+Po každém volání Claude API se sečtou tokeny a podle ceníku se spočítá **odhad** v korunách
+(kurz `KURZ_USD`, výchozí 23 Kč/USD). Vidíš ho v informačním panelu (dnes, tento měsíc,
+graf 14 dní, podle agentů) a ptát se na něj můžeš Bita. Ukládá se do `data/utrata.json`.
+Přesná čísla a vyúčtování jsou v **Claude Console → Usage / Cost**.
+
 ## Lexa – rešerše a plakátky
 
 - Zadáš jí v chatu rešerši („Porovnej tepelná čerpadla“, „Kam na výlet s dětmi kolem Lipníku?“).
@@ -141,7 +159,7 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 
 | Box         | Agent   | Role                                           | Stav |
 |-------------|---------|------------------------------------------------|------|
-| 🏛️ Radnice  | Ondik   | Hlavní asistent, budoucí Jarvis (hlas, hovory) | ✅ chat přes Claude |
+| 🏛️ Radnice  | Ondik   | Šéf týmu: rozděluje úkoly, společná paměť; budoucí Jarvis | ✅ běží |
 | 📰 Redakce  | Echo    | Zprávy ze světa, Česka a regionu, hodinové plakátky, počasí | ✅ běží |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
