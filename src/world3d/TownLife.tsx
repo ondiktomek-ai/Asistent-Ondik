@@ -374,6 +374,30 @@ class TownSim {
     done();
   }
 
+  /** Co se v městečku zrovna děje (pro informační panel). */
+  summary(): { id: string; icon: string; text: string }[] {
+    if (this.meeting) return [{ id: 'porada', icon: '🏛️', text: this.meeting.phase === 'gather' ? 'Roboti se scházejí na poradu' : this.meeting.phase === 'talk' ? 'Porada na radnici právě probíhá' : 'Porada skončila, rozcházejí se' }];
+    const out: { id: string; icon: string; text: string }[] = [];
+    for (const b of this.brains) {
+      const n = b.agent.name;
+      const there = b.path.length === 0;
+      if (b.loc.kind === 'stall') {
+        const st = STALLS[b.loc.i];
+        out.push({ id: b.id, icon: st.icon, text: there ? `${n} nakupuje – ${st.name.toLowerCase()}` : `${n} jde do stánku ${st.name}` });
+      } else if (b.loc.kind === 'visit') {
+        const host = this.byId(b.loc.host)?.agent.name ?? '';
+        out.push({ id: b.id, icon: '👋', text: there ? `Návštěva: ${n} → ${host}` : `${n} jde na návštěvu → ${host}` });
+      } else if (b.loc.kind === 'road') {
+        out.push({ id: b.id, icon: '🚶', text: `${n} se prochází po náměstí` });
+      } else if (b.carry && b.walking) {
+        out.push({ id: b.id, icon: '🛍️', text: `${n} nese nákup domů` });
+      }
+    }
+    const sleeping = this.brains.filter((b) => b.sleeping).length;
+    if (sleeping) out.push({ id: 'spanek', icon: '😴', text: sleeping === 1 ? '1 robot spí' : `${sleeping} roboti spí` });
+    return out;
+  }
+
   get meetingActive() {
     return !!this.meeting;
   }
@@ -472,9 +496,11 @@ interface TownLifeProps {
   onMeetingEnd: () => void;
   onSelect: (id: string) => void;
   notes?: Record<string, string>;
+  /** Každé 2 s dostane přehled, co se v městečku děje. */
+  onSummary?: (items: { id: string; icon: string; text: string }[]) => void;
 }
 
-export function TownLife({ night, busy, busyLabels, meetingId, onMeetingEnd, onSelect, notes = {} }: TownLifeProps) {
+export function TownLife({ night, busy, busyLabels, meetingId, onMeetingEnd, onSelect, notes = {}, onSummary }: TownLifeProps) {
   const sim = useMemo(() => new TownSim(), []);
   // ladění: s ?ladeni v adrese je simulace dostupná v konzoli jako window.mestecko
   useEffect(() => {
@@ -488,6 +514,21 @@ export function TownLife({ night, busy, busyLabels, meetingId, onMeetingEnd, onS
   useEffect(() => {
     if (meetingId > 0) sim.startMeeting(() => endRef.current());
   }, [meetingId, sim]);
+
+  const summaryRef = useRef(onSummary);
+  summaryRef.current = onSummary;
+  useEffect(() => {
+    let last = '';
+    const t = setInterval(() => {
+      const s = sim.summary();
+      const key = JSON.stringify(s);
+      if (key !== last) {
+        last = key;
+        summaryRef.current?.(s);
+      }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [sim]);
 
   // Při nízkém počtu snímků (pomalý počítač) uděláme víc menších kroků, aby roboti nezpomalili.
   const speed = useMemo(() => {

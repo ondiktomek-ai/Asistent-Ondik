@@ -76,5 +76,5 @@ export function useReminders(enabled: boolean) {
   }, [events]);
 
   const dismiss = useCallback((id: string) => setActive((prev) => prev.filter((r) => r.id !== id)), []);
-  return { reminders: active, dismiss };
+  return { reminders: active, dismiss, events };
 }

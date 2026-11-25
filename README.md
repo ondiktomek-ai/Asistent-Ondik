@@ -84,6 +84,22 @@ každý řekne, jak na tom je, a pak se rozejdou. Když agent pracuje (chat, pla
 Logika je v `src/world3d/TownLife.tsx` (plánování činností a cest), geometrie cest a stánků
 v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí čas.
 
+## Lexa – rešerše a plakátky
+
+- Zadáš jí v chatu rešerši („Porovnej tepelná čerpadla“, „Kam na výlet s dětmi kolem Lipníku?“).
+  Lexa **hledá a čte web** (vestavěné nástroje Claude API) a odpoví se zdroji.
+- Řekneš-li „udělej z toho plakátek“, vylepí výsledek jako **plakátek**: titulek, shrnutí,
+  klíčová čísla, sekce, doporučení a zdroje. Otevře se sám, najdeš ho i v jejím panelu (📚 Plakátky)
+  a v informačním panelu vpravo.
+- Běží na **Claude Haiku 5.5** (`LEXA_MODEL`), hledání stojí navíc asi 0,25 Kč za dotaz.
+  Limity na jednu odpověď: `LEXA_MAX_HLEDANI` (6) a `LEXA_MAX_CTENI` (5).
+
+## Rozložení obrazovky
+
+- **Vpravo informační panel**: čas a počasí, *Právě teď* (kdo co dělá – nákupy, návštěvy, porada,
+  práce agentů), *Dnes na práci* (zbývající události z kalendáře, další plakátek), stav městečka a poslední plakátky.
+- **Dole lišta zpráv** od Echa – jednotlivé zprávy jako bublinky; najetím myší se zastaví, kliknutím otevřeš článek.
+
 ## Bit – údržbář a správce nápadů
 
 - Každých **15 minut** zkontroluje městečko: Claude API klíč, Google Kalendář, zdroje zpráv,
@@ -129,7 +145,7 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 | 📰 Redakce  | Echo    | Zprávy ze světa, Česka a regionu, hodinové plakátky, počasí | ✅ běží |
 | ✉️ Pošta    | Pošťák  | E-maily – Gmail + Centrum.cz                   | plánováno |
 | 📅 Kalendář | Chronos | Google Kalendář: přehled, volno, zápis, připomínky | ✅ po propojení |
-| 📚 Knihovna | Lexa    | Rešerše na webu a v dokumentech                | plánováno |
+| 📚 Knihovna | Lexa    | Rešerše na webu, plakátky z rešerší            | ✅ běží |
 | 💰 Finance  | Kasa    | Faktury, výdaje, předplatná                    | plánováno |
 | 🔧 Dílna    | Bit     | Údržba: kontroly, připomínky, nápady na vylepšení | ✅ běží |
 | ＋ Volný box | –      | Místo pro budoucího agenta                     |      |

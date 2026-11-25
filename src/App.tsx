@@ -1,8 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchBitStatus, fetchDigest, fetchStatus, startGoogleAuth, type BitAlert, type Digest, type ServerStatus } from './api';
+import {
+  fetchBitStatus,
+  fetchDigest,
+  fetchResearchPoster,
+  fetchResearchPosters,
+  fetchStatus,
+  startGoogleAuth,
+  type BitAlert,
+  type BitReport,
+  type Digest,
+  type ResearchPoster,
+  type ServerStatus,
+} from './api';
 import { useNewsroom } from './hooks/useNewsroom';
 import { useReminders } from './hooks/useReminders';
-import { NewsTicker } from './components/NewsTicker';
+import { NewsBar } from './components/NewsBar';
+import { InfoPanel, type TownItem } from './components/InfoPanel';
+import { ResearchPosterView } from './components/ResearchPosterView';
 import { DigestPoster } from './components/DigestPoster';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
 import { isVacantId } from './world/layout';
@@ -107,6 +121,7 @@ export default function App() {
 
   // --- Bit: upozornění (např. přihlášení ke Googlu) ---
   const [bitAlerts, setBitAlerts] = useState<BitAlert[]>([]);
+  const [bitReport, setBitReport] = useState<BitReport | null>(null);
   const [snoozed, setSnoozed] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem('bit-odlozeno') ?? '{}') as Record<string, number>;
@@ -118,7 +133,10 @@ export default function App() {
     if (!serverOnline) return;
     const load = () =>
       fetchBitStatus()
-        .then((r) => setBitAlerts(r.alerts))
+        .then((r) => {
+          setBitAlerts(r.alerts);
+          setBitReport(r);
+        })
         .catch(() => {});
     load();
     const t = setInterval(load, 5 * 60_000);
@@ -154,7 +172,29 @@ export default function App() {
   }, [bitAlerts]);
 
   // --- Chronos: připomínky 10 minut před událostí ---
-  const { reminders, dismiss } = useReminders(serverOnline && !!status?.google?.connected);
+  const { reminders, dismiss, events } = useReminders(serverOnline && !!status?.google?.connected);
+
+  // --- Lexa: plakátky z rešerší ---
+  const [research, setResearch] = useState<ResearchPoster | null>(null);
+  const [researchRefresh, setResearchRefresh] = useState(0);
+  const [lastResearch, setLastResearch] = useState<{ id: string; title: string } | null>(null);
+  useEffect(() => {
+    if (!serverOnline) return;
+    fetchResearchPosters()
+      .then((r) => setLastResearch(r.posters[0] ? { id: r.posters[0].id, title: r.posters[0].title } : null))
+      .catch(() => {});
+  }, [serverOnline, researchRefresh]);
+  const openResearch = useCallback((id: string) => {
+    void fetchResearchPoster(id)
+      .then((p) => {
+        setResearch(p);
+        setResearchRefresh((n) => n + 1);
+      })
+      .catch(() => {});
+  }, []);
+
+  // --- co se děje v městečku (pro informační panel) ---
+  const [town, setTown] = useState<TownItem[]>([]);
 
   const [poster, setPoster] = useState<Digest | null>(null);
   const autoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -255,8 +295,11 @@ export default function App() {
             meetingActive={meetingActive}
             onMeetingEnd={endMeeting}
             robotNotes={robotNotes}
+            onTownSummary={setTown}
           />
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
+          {research && <ResearchPosterView poster={research} onClose={() => setResearch(null)} />}
+          <NewsBar newsroom={newsroom} serverOnline={serverOnline} onOpenEcho={() => setSelectedId('echo')} />
           {poster && <DigestPoster digest={poster} onClose={closePoster} />}
           {(reminders.length > 0 || visibleAlerts.length > 0) && (
             <div className="reminders" role="status">
@@ -297,7 +340,21 @@ export default function App() {
             </div>
           )}
         </div>
-        <NewsTicker newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={() => openPoster()} onOpenEcho={() => setSelectedId('echo')} />
+        <InfoPanel
+          time={time}
+          newsroom={newsroom}
+          serverOnline={serverOnline}
+          busy={allBusy}
+          busyLabels={busyLabels}
+          town={town}
+          events={events}
+          calendarConnected={!!status?.google?.connected}
+          bitReport={bitReport}
+          lastResearch={lastResearch}
+          onSelect={setSelectedId}
+          onOpenPoster={() => openPoster()}
+          onOpenResearch={openResearch}
+        />
         <AgentPanel
           agent={selected}
           vacant={isVacantId(selectedId)}
@@ -311,6 +368,8 @@ export default function App() {
           calendarNotice={selectedId === 'chronos' ? calendarNotice : null}
           initialTab={selectedId === 'chronos' ? initialTab : null}
           onGoogleLogin={googleLogin}
+          onOpenResearch={openResearch}
+          researchRefresh={researchRefresh}
         />
       </main>
     </div>

@@ -10,6 +10,7 @@ import { digestState, generateDigest, getDigest, latestNews, startReporter } fro
 import { getWeather } from './weather.ts';
 import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, saveClient } from './google.ts';
 import { agenda } from './calendar.ts';
+import { deletePoster, getPoster, listPosters } from './lexa.ts';
 import { addIdea, deleteIdea, getReport, listIdeas, startMaintenance, updateIdea } from './bit.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -21,7 +22,7 @@ const CONNECTED_AGENTS = new Set(Object.keys(CHAT_AGENTS));
 /** Kam Google po přihlášení vrací prohlížeč (klient typu „Desktop app“ povoluje loopback adresu). */
 const GOOGLE_REDIRECT = `http://127.0.0.1:${PORT}/api/google/callback`;
 /** Agenti, kteří pracují sami (bez chatu). */
-const ACTIVE_AGENTS = ['echo', 'bit'];
+const ACTIVE_AGENTS = ['echo', 'bit', 'lexa'];
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -137,6 +138,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     }
   }
 
+  // --- Lexa: plakátky z rešerší ---
+  if (url.pathname === '/api/lexa/posters') return json(res, 200, { posters: await listPosters() });
+  const lp = url.pathname.match(/^\/api\/lexa\/posters\/([a-z0-9-]+)$/);
+  if (lp) {
+    if (req.method === 'DELETE') {
+      await deletePoster(lp[1]);
+      return json(res, 200, { ok: true });
+    }
+    const p = await getPoster(lp[1]);
+    return p ? json(res, 200, p) : json(res, 404, { error: 'Plakátek nenalezen.' });
+  }
+
   // --- Bit: údržba a nápady ---
   if (url.pathname === '/api/bit/status') return json(res, 200, await getReport(url.searchParams.has('ted')));
   if (url.pathname === '/api/bit/ideas') {
@@ -226,7 +239,10 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     if (!res.writableFinished) abort.abort();
   });
   try {
-    await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), onTool: (label) => send('tool', { label }), signal: abort.signal });
+    await chatWithAgent(agentId, text, { onText: (t) => send('delta', { text: t }), onTool: (label) => send('tool', { label }),
+      onAttachment: (a) => send('attachment', a),
+      signal: abort.signal,
+    });
     send('done', {});
   } catch (err) {
     if (!abort.signal.aborted) {

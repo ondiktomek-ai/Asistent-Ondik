@@ -98,11 +98,13 @@ export const AGENTS: AgentDef[] = [
     color: '#a874f7',
     theme: 'research',
     status: 'setup',
-    description: 'Hledá informace na webu i v tvých dokumentech, porovnává možnosti a sepisuje přehledy.',
-    duties: ['Rešerše na webu', 'Shrnutí článků a dokumentů', 'Porovnání produktů a nabídek', 'Práce s tvými soubory'],
+    description:
+      'Hledá a čte informace na webu, porovnává možnosti a sepisuje přehledy. Výsledek rešerše ti umí vylepit jako přehledný plakátek se zdroji.',
+    duties: ['Rešerše na webu (hledání i čtení stránek)', 'Porovnání produktů, služeb a nabídek', 'Plakátky z rešerší se zdroji', 'Tipy z okolí Lipníku nad Bečvou'],
     tools: [
-      { name: 'Vyhledávání na webu', description: 'Aktuální informace z internetu', status: 'planned' },
-      { name: 'Google Disk', description: 'Hledání v tvých dokumentech', status: 'planned' },
+      { name: 'Vyhledávání na webu', description: 'Hledání a čtení stránek přes Claude (Haiku 5.5)', status: 'connected' },
+      { name: 'Plakátky z rešerší', description: 'Přehledný plakátek se shrnutím, body, doporučením a zdroji', status: 'connected' },
+      { name: 'Google Disk', description: 'Hledání v tvých dokumentech – připojíme později', status: 'planned' },
     ],
     idleLines: ['Zajímavé čtení…', 'Našla jsem zdroj!', 'Hmm, ověřím to.', 'Pssst, knihovna.'],
   },

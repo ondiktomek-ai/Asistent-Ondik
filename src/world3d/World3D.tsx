@@ -27,6 +27,7 @@ interface World3DProps {
   onMeetingEnd: () => void;
   /** Co má robot občas připomenout (agentId → text). */
   robotNotes?: Record<string, string>;
+  onTownSummary?: (items: { id: string; icon: string; text: string }[]) => void;
 }
 
 /** Výchozí pohled na celé městečko; na úzké (telefonní) obrazovce víc z dálky. */
@@ -34,7 +35,7 @@ function overview(aspect: number) {
   return aspect < 0.85 ? { height: 44, dist: 40 } : { height: 19, dist: 24 };
 }
 
-export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {}, meetingId, meetingActive, onMeetingEnd, robotNotes = {} }: World3DProps) {
+export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabels = {}, meetingId, meetingActive, onMeetingEnd, robotNotes = {}, onTownSummary }: World3DProps) {
   const darkness = darknessFor(time, lightMode);
   const night = darkness > 0.5;
   const [initial] = useState(() => overview(window.innerWidth / Math.max(1, window.innerHeight - 120)));
@@ -59,6 +60,7 @@ export function World3D({ time, lightMode, selectedId, onSelect, busy, busyLabel
         meetingActive={meetingActive}
         onMeetingEnd={onMeetingEnd}
         robotNotes={robotNotes}
+        onTownSummary={onTownSummary}
       />
     </Canvas>
   );
@@ -76,6 +78,7 @@ function Scene({
   meetingActive,
   onMeetingEnd,
   robotNotes = {},
+  onTownSummary,
 }: {
   time: Date;
   darkness: number;
@@ -90,6 +93,7 @@ function Scene({
   onMeetingEnd: () => void;
   /** Co má robot občas připomenout (agentId → text). */
   robotNotes?: Record<string, string>;
+  onTownSummary?: (items: { id: string; icon: string; text: string }[]) => void;
 }) {
   const sky = useMemo(() => new Color('#a9dcff').lerp(new Color('#0b1330'), darkness), [darkness]);
   const select = onSelect as (id: string) => void;
@@ -146,7 +150,7 @@ function Scene({
         <Stall key={st.id} stall={st} />
       ))}
 
-      <TownLife night={night} busy={busy} busyLabels={busyLabels} meetingId={meetingId} onMeetingEnd={onMeetingEnd} onSelect={select} notes={robotNotes} />
+      <TownLife night={night} busy={busy} busyLabels={busyLabels} meetingId={meetingId} onMeetingEnd={onMeetingEnd} onSelect={select} notes={robotNotes} onSummary={onTownSummary} />
 
       <OrbitControls
         makeDefault

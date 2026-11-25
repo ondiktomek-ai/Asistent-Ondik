@@ -2,10 +2,18 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type Anthropic from '@anthropic-ai/sdk';
 
+export interface ChatAttachment {
+  kind: 'lexa-poster';
+  id: string;
+  title: string;
+}
+
 export interface DisplayMessage {
   role: 'user' | 'assistant';
   text: string;
   at: string;
+  /** Co agent při odpovědi vytvořil (např. plakátek z rešerše). */
+  attachments?: ChatAttachment[];
 }
 
 /** Konverzace jednoho agenta. `api` je přesná historie pro Claude API (jen se přidává, nikdy se needituje). */

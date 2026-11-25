@@ -7,12 +7,15 @@ import type { Newsroom } from '../hooks/useNewsroom';
 import { ReporterPanel } from './ReporterPanel';
 import { CalendarPanel } from './CalendarPanel';
 import { MaintenancePanel } from './MaintenancePanel';
+import { ResearchList } from './ResearchList';
+import type { ChatAttachment } from '../api';
 
 /** Agenti s druhou záložkou vedle chatu. */
 const SIDE_TABS: Record<string, { id: string; label: string }> = {
   echo: { id: 'zpravy', label: '📰 Zprávy a počasí' },
   chronos: { id: 'kalendar', label: '📅 Kalendář' },
   bit: { id: 'udrzba', label: '🔧 Údržba' },
+  lexa: { id: 'plakatky', label: '📚 Plakátky' },
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -38,6 +41,10 @@ interface AgentPanelProps {
   initialTab?: string | null;
   /** Přihlásit se ke Googlu (z Bitova upozornění). */
   onGoogleLogin: () => void;
+  /** Otevřít plakátek z Lexiny rešerše. */
+  onOpenResearch: (id: string) => void;
+  /** Mění se po vytvoření nového plakátku. */
+  researchRefresh: number;
 }
 
 export function AgentPanel({
@@ -53,7 +60,10 @@ export function AgentPanel({
   calendarNotice,
   initialTab,
   onGoogleLogin,
+  onOpenResearch,
+  researchRefresh,
 }: AgentPanelProps) {
+  const openAttachment = (a: ChatAttachment) => onOpenResearch(a.id);
   const [tab, setTab] = useState<string>(initialTab ?? 'chat');
   const [tabAgent, setTabAgent] = useState<string | null>(agent?.id ?? null);
   // při přepnutí na jiného agenta začni chatem (pokud není řečeno jinak)
@@ -170,9 +180,12 @@ export function AgentPanel({
                     onStatusChange={onStatusChange}
                     onBusyChange={(b) => onBusyChange(agent.id, b)}
                     onActivity={(l) => onActivity(agent.id, l)}
+                    onOpenAttachment={openAttachment}
                   />
                 ) : agent.id === 'echo' ? (
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
+                ) : agent.id === 'lexa' ? (
+                  <ResearchList serverOnline={serverOnline} onOpen={onOpenResearch} refreshKey={researchRefresh} />
                 ) : agent.id === 'bit' ? (
                   <MaintenancePanel serverOnline={serverOnline} onGoogleLogin={onGoogleLogin} />
                 ) : (

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AGENTS } from '../src/world/agents.ts';
-import { loadConversation, saveConversation, type DisplayMessage } from './store.ts';
+import { loadConversation, saveConversation, type ChatAttachment, type DisplayMessage } from './store.ts';
+import { LEXA_MODEL, LEXA_SYSTEM, LEXA_TOOLS, LEXA_TOOL_LABELS, lexaContext, runLexaTool } from './lexa.ts';
 import { apiKeyConfigured, nowText } from './config.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
 import { BIT_MODEL, BIT_SYSTEM, BIT_TOOLS, BIT_TOOL_LABELS, bitContext, runBitTool } from './bit-chat.ts';
@@ -58,6 +59,8 @@ interface ChatHandlers {
   onText: (delta: string) => void;
   /** Agent právě používá nástroj (text pro zobrazení, např. „Dívám se do kalendáře…“). */
   onTool?: (label: string) => void;
+  /** Agent něco vytvořil (např. plakátek) – klient ho může hned otevřít. */
+  onAttachment?: (a: ChatAttachment) => void;
   signal: AbortSignal;
 }
 
@@ -71,7 +74,8 @@ interface AgentChatConfig {
   /** Podklady přiložené ke každé otázce (jako systémová zpráva). */
   context: () => Promise<string>;
   /** Nástroje, které agent smí používat (např. kalendář). */
-  tools?: Anthropic.Beta.BetaTool[];
+  /** Vlastní nástroje i vestavěné nástroje Claude API (např. hledání na webu). */
+  tools?: Anthropic.Beta.BetaToolUnion[];
   runTool?: (name: string, input: Record<string, unknown>) => Promise<string>;
   toolLabels?: Record<string, string>;
 }
@@ -99,6 +103,17 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
     runTool: runChronosTool,
     toolLabels: TOOL_LABELS,
   },
+  lexa: {
+    name: 'Lexa',
+    model: LEXA_MODEL,
+    system: LEXA_SYSTEM,
+    effort: 'low',
+    fallbacks: false,
+    context: lexaContext,
+    tools: LEXA_TOOLS,
+    runTool: runLexaTool,
+    toolLabels: LEXA_TOOL_LABELS,
+  },
   bit: {
     name: 'Bit',
     model: BIT_MODEL,
@@ -121,7 +136,7 @@ export const CHAT_AGENTS: Record<string, AgentChatConfig> = {
 };
 
 /** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
-export async function chatWithAgent(agentId: string, text: string, { onText, onTool, signal }: ChatHandlers): Promise<string> {
+export async function chatWithAgent(agentId: string, text: string, { onText, onTool, onAttachment, signal }: ChatHandlers): Promise<string> {
   const cfg = CHAT_AGENTS[agentId];
   if (!cfg) throw new Error('S tímto agentem se zatím psát nedá.');
   if (busy.has(agentId)) throw new Error(`${cfg.name} ještě odpovídá na předchozí zprávu.`);
@@ -137,6 +152,7 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
 
     let reply = '';
     let newRound = false;
+    const attachments: ChatAttachment[] = [];
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const stream = getClient().beta.messages.stream(
         {
@@ -162,11 +178,22 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
         reply += t;
         onText(t);
       });
+      // vestavěné nástroje (hledání na webu) běží u Claude – ukážeme aspoň, že se hledá
+      stream.on('streamEvent', (ev) => {
+        if (ev.type === 'content_block_start' && ev.content_block.type === 'server_tool_use') {
+          onTool?.(cfg.toolLabels?.[ev.content_block.name] ?? '🔎 Hledám…');
+        }
+      });
       const final = await stream.finalMessage();
 
       if (final.stop_reason === 'refusal') throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
       if (final.stop_reason === 'max_tokens') throw new Error('Odpověď se nevešla do limitu, zkus otázku zjednodušit.');
       messages.push({ role: 'assistant', content: final.content });
+      // dlouhé hledání na webu Claude přeruší „pause_turn“ – pošleme to samé znovu a on pokračuje
+      if (final.stop_reason === 'pause_turn') {
+        newRound = true;
+        continue;
+      }
       if (final.stop_reason !== 'tool_use' || !cfg.runTool) break;
 
       // provedeme všechny požadované nástroje a výsledky vrátíme v jedné zprávě
@@ -177,6 +204,12 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
         try {
           const out = await cfg.runTool(u.name, (u.input ?? {}) as Record<string, unknown>);
           results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
+          if (u.name === 'create_poster') {
+            const r = JSON.parse(out) as { id: string; titulek: string };
+            const a: ChatAttachment = { kind: 'lexa-poster', id: r.id, title: r.titulek };
+            attachments.push(a);
+            onAttachment?.(a);
+          }
         } catch (err) {
           results.push({ type: 'tool_result', tool_use_id: u.id, content: err instanceof Error ? err.message : String(err), is_error: true });
         }
@@ -188,7 +221,7 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
     const at = new Date().toISOString();
     await saveConversation(agentId, {
       api: messages,
-      display: [...conv.display, { role: 'user', text, at }, { role: 'assistant', text: reply, at: new Date().toISOString() }],
+      display: [...conv.display, { role: 'user', text, at }, { role: 'assistant', text: reply, at: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) }],
     });
     return reply;
   } finally {

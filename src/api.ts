@@ -10,10 +10,17 @@ export interface ServerStatus {
   google?: { configured: boolean; connected: boolean };
 }
 
+export interface ChatAttachment {
+  kind: 'lexa-poster';
+  id: string;
+  title: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   at: string;
+  attachments?: ChatAttachment[];
 }
 
 const TOKEN_KEY = 'kancelar-heslo';
@@ -79,6 +86,7 @@ export async function sendMessage(
   onDelta: (t: string) => void,
   signal?: AbortSignal,
   onTool?: (label: string) => void,
+  onAttachment?: (a: ChatAttachment) => void,
 ): Promise<void> {
   const res = await fetch(`/api/chat/${agentId}`, {
     method: 'POST',
@@ -111,6 +119,7 @@ export async function sendMessage(
       const payload = JSON.parse(data);
       if (event === 'delta') onDelta(payload.text);
       else if (event === 'tool') onTool?.(payload.label);
+      else if (event === 'attachment') onAttachment?.(payload as ChatAttachment);
       else if (event === 'error') throw new ApiError(500, payload.message);
       else if (event === 'done') return;
     }
@@ -269,3 +278,22 @@ export const fetchIdeas = () => request<{ ideas: Idea[] }>('/api/bit/ideas');
 export const addIdeaApi = (title: string, detail: string) => request<Idea>('/api/bit/ideas', jsonInit('POST', { title, detail }));
 export const updateIdeaApi = (id: string, patch: Partial<Pick<Idea, 'status' | 'priority' | 'title' | 'detail'>>) => request<Idea>(`/api/bit/ideas/${id}`, jsonInit('PATCH', patch));
 export const deleteIdeaApi = (id: string) => request<{ ok: true }>(`/api/bit/ideas/${id}`, { method: 'DELETE' });
+
+// ---------------------------------------------------------------- Lexa (plakátky z rešerší)
+
+export interface ResearchPoster {
+  id: string;
+  createdAt: string;
+  topic: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  sections: { heading: string; points: string[] }[];
+  facts: { label: string; value: string }[];
+  verdict: string;
+  sources: { title: string; url: string }[];
+}
+
+export const fetchResearchPosters = () => request<{ posters: { id: string; createdAt: string; title: string; topic: string }[] }>('/api/lexa/posters');
+export const fetchResearchPoster = (id: string) => request<ResearchPoster>(`/api/lexa/posters/${id}`);
+export const deleteResearchPoster = (id: string) => request<{ ok: true }>(`/api/lexa/posters/${id}`, { method: 'DELETE' });

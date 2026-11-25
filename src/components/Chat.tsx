@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactElement } from 'react';
-import { ApiError, clearHistory, fetchHistory, sendMessage, setToken, type ChatMessage, type ServerStatus } from '../api';
+import { ApiError, clearHistory, fetchHistory, sendMessage, setToken, type ChatAttachment, type ChatMessage, type ServerStatus } from '../api';
 import type { AgentDef } from '../world/types';
 
 interface ChatProps {
@@ -9,6 +9,8 @@ interface ChatProps {
   onBusyChange: (busy: boolean) => void;
   /** Co agent právě dělá (např. „Dívám se do kalendáře…“), null = nic. */
   onActivity?: (label: string | null) => void;
+  /** Otevřít přílohu (plakátek z rešerše). */
+  onOpenAttachment?: (a: ChatAttachment) => void;
 }
 
 /** Zobrazení textu odpovědi: odstavce, odrážky a **tučné**. Bez HTML z modelu. */
@@ -67,10 +69,11 @@ const CHAT_HINTS: Record<string, string> = {
   ondik: 'Napiš, s čím potřebuješ pomoct. Třeba „Co bys mi dnes doporučil udělat jako první?“',
   chronos: 'Napiš, co potřebuješ. Třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“ nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“.',
   bit: 'Zeptej se „Běží všechno?“, nebo mi řekni nápad, co v městečku vylepšit – zapíšu si ho.',
+  lexa: 'Zadej mi rešerši – třeba „Porovnej tepelná čerpadla do rodinného domu“ nebo „Kam na výlet s dětmi v okolí Lipníku? Udělej z toho plakátek“.',
   echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
 };
 
-export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity }: ChatProps) {
+export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, onOpenAttachment }: ChatProps) {
   const [activity, setActivity] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -108,6 +111,7 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity }
     const abort = new AbortController();
     abortRef.current = abort;
     let reply = '';
+    const made: ChatAttachment[] = [];
     try {
       await sendMessage(
         agent.id,
@@ -123,8 +127,12 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity }
           setActivity(label);
           onActivity?.(label);
         },
+        (a) => {
+          made.push(a);
+          onOpenAttachment?.(a);
+        },
       );
-      setMessages((m) => [...m, { role: 'assistant', text: reply, at: new Date().toISOString() }]);
+      setMessages((m) => [...m, { role: 'assistant', text: reply, at: new Date().toISOString(), ...(made.length ? { attachments: [...made] } : {}) }]);
     } catch (err) {
       if (abort.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Něco se pokazilo.');
@@ -202,6 +210,11 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity }
         {messages.map((m, i) => (
           <div key={i} className={`msg msg-${m.role}`}>
             {m.role === 'assistant' ? <RichText text={m.text} /> : m.text}
+            {m.attachments?.map((a) => (
+              <button key={a.id} className="chat-attachment" onClick={() => onOpenAttachment?.(a)}>
+                📜 {a.title}
+              </button>
+            ))}
           </div>
         ))}
         {streaming !== null && (
