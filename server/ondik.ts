@@ -190,8 +190,13 @@ async function runAgent(agentId: string, messages: Anthropic.Beta.BetaMessagePar
         system,
         cache_control: { type: 'ephemeral' },
         output_config: { effort: cfg.effort },
+        // Uložené „myšlenky“ modelu platí jen pro přesně stejné pokyny, nástroje a historii.
+        // Po aktualizaci městečka (jiné pokyny) nebo zkrácení historie by API požadavek odmítlo –
+        // takhle neplatné myšlenky jen vynechá a pokračuje.
+        thinking: { type: 'adaptive', block_binding: { prefix_mismatch_behavior: 'drop_block' } },
         // Když model požadavek odmítne, API ho automaticky zkusí na záložním modelu.
-        ...(cfg.fallbacks ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
+        betas: cfg.fallbacks ? ['thinking-binding-controls-2026-08-01', 'server-side-fallback-2026-07-01'] : ['thinking-binding-controls-2026-08-01'],
+        ...(cfg.fallbacks ? { fallbacks: 'default' as const } : {}),
         tools,
         messages,
       },
@@ -296,6 +301,17 @@ async function askColleague(fromId: string, toId: string, task: string, o: RunOp
   }
 }
 
+/** Odstraní z historie bloky „myšlenek“ (text odpovědí a nástroje zůstanou). */
+function stripThinking(api: Anthropic.Beta.BetaMessageParam[]): Anthropic.Beta.BetaMessageParam[] {
+  return api
+    .map((m) => {
+      if (m.role !== 'assistant' || typeof m.content === 'string') return m;
+      const content = m.content.filter((b) => b.type !== 'thinking' && b.type !== 'redacted_thinking');
+      return content.length ? { ...m, content } : null;
+    })
+    .filter((m): m is Anthropic.Beta.BetaMessageParam => m !== null);
+}
+
 const HISTORY_MAX = 120;
 const HISTORY_KEEP = 50;
 
@@ -325,7 +341,20 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
       { role: 'user', content: text },
       { role: 'system', content: `${await cfg.context()}\n\n${await teamContext()}${extraContext ? `\n\n${extraContext}` : ''}` },
     ];
-    const { reply, attachments } = await runAgent(agentId, messages, { depth: 0, onText, onTool, onAttachment, signal });
+    let result: { reply: string; attachments: ChatAttachment[] };
+    const base = messages.length;
+    try {
+      result = await runAgent(agentId, messages, { depth: 0, onText, onTool, onAttachment, signal });
+    } catch (err) {
+      // Záchrana: API odmítlo staré myšlenky v historii → vymažeme je a zkusíme to jednou znovu.
+      if (!(err instanceof Anthropic.BadRequestError) || !/thinking/i.test(err.message) || signal.aborted) throw err;
+      console.warn(`[${agentId}] historie s neplatnými myšlenkami – čistím a zkouším znovu`);
+      messages.length = base;
+      const cleaned = stripThinking(messages);
+      messages.splice(0, messages.length, ...cleaned);
+      result = await runAgent(agentId, messages, { depth: 0, onText, onTool, onAttachment, signal });
+    }
+    const { reply, attachments } = result;
     const at = new Date().toISOString();
     await saveConversation(agentId, {
       api: messages,

@@ -85,7 +85,10 @@ function errorMessage(err: unknown): string {
   if (err instanceof Anthropic.PermissionDeniedError) return 'API klíč nemá k tomuto modelu přístup.';
   if (err instanceof Anthropic.RateLimitError) return 'Příliš mnoho požadavků najednou, zkus to za chvilku.';
   if (err instanceof Anthropic.BadRequestError) {
-    return /credit balance/i.test(err.message) ? 'Na účtu Anthropic došel kredit.' : `Chybný požadavek: ${err.message}`;
+    if (/credit balance/i.test(err.message)) return 'Na účtu Anthropic došel kredit.';
+    // místo syrového JSONu jen samotná zpráva od API
+    const inner = (err.error as { error?: { message?: string } } | undefined)?.error?.message ?? err.message;
+    return `Claude požadavek odmítl: ${inner.length > 220 ? inner.slice(0, 220) + '…' : inner}`;
   }
   if (err instanceof Anthropic.APIConnectionError) return 'Nepodařilo se spojit s Claude API. Je počítač online?';
   if (err instanceof Anthropic.APIError) return `Chyba Claude API (${err.status}).`;
