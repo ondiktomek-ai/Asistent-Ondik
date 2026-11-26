@@ -70,6 +70,11 @@ export function ResearchPosterView({ poster, onClose }: { poster: ResearchPoster
           </div>
         )}
 
+        {poster.sources.length === 0 && (
+          <footer className="research-sources">
+            <p className="research-nosrc">Bez hledání na webu – sestaveno z podkladů a znalostí Lexy.</p>
+          </footer>
+        )}
         {poster.sources.length > 0 && (
           <footer className="research-sources">
             <h3>Zdroje</h3>

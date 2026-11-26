@@ -24,7 +24,7 @@ export const NEWS_SOURCES: NewsSource[] = [
   { id: 'guardian', name: 'The Guardian', url: 'https://www.theguardian.com/world/rss', scope: 'svet' },
   // Region – Olomoucký kraj, Přerovsko
   { id: 'idnes-olomouc', name: 'iDNES Olomoucký kraj', url: 'https://servis.idnes.cz/rss.aspx?c=olomouc', scope: 'region' },
-  { id: 'prerovsky-denik', name: 'Přerovský deník', url: 'https://prerovsky.denik.cz/rss/', scope: 'region' },
+  { id: 'prerovsky-denik', name: 'Přerovský deník', url: 'https://prerovsky.denik.cz/rss/zpravy.xml', scope: 'region' },
 ];
 
 export const SCOPE_NAMES: Record<NewsScope, string> = { svet: 'svět', cesko: 'Česko', region: 'region' };

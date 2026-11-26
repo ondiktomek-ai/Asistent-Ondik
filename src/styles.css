@@ -3868,3 +3868,10 @@ button {
     transform: rotate(360deg);
   }
 }
+
+.research-nosrc {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+}

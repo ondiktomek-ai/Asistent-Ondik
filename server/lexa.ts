@@ -19,11 +19,13 @@ Co děláš:
 - Vycházej z toho, co opravdu najdeš. Fakta, čísla a ceny uváděj se zdrojem. Když se zdroje rozcházejí nebo něco nevíš jistě, řekni to.
 - Hledej chytře: obvykle 2–4 hledání stačí, stránky čti jen ty nejslibnější. Uživatel bydlí v Lipníku nad Bečvou (Olomoucký kraj) – když se dotaz týká míst, obchodů nebo služeb, ber to v úvahu. Ceny uváděj v Kč, když to jde.
 - Když uživatel chce plakátek (nebo je rešerše větší a hodí se přehled), zavolej create_poster s výsledkem: výstižný titulek, krátké shrnutí, 2–4 sekce s body, klíčová čísla, doporučení a zdroje (název + URL ze skutečně použitých stránek). Do chatu pak napiš jen krátce, co jsi zjistila – plakátek se mu otevře sám.
+- Plakátek umíš vylepit i BEZ hledání na webu: z textu nebo podkladů, které ti uživatel dá („udělej plakátek z tohohle“), z toho, co už je v rozhovoru (třeba od kolegy), nebo ze svých obecných znalostí u témat, kde nejde o aktuální informace (návody, vysvětlení, tipy, plány, seznamy). Na web jdi jen tehdy, když jde o aktuální věci (ceny, otevírací doby, novinky, akce) nebo když si nejsi jistá. Když hledání nejde nebo selže, plakátek stejně vylep z toho, co víš, a řekni to.
+- Bez hledání nech sources prázdné – nikdy si nevymýšlej odkazy. Fakta, která nemáš ověřená z webu, formuluj opatrně.
 - Odpovídej stručně, uživatel tě často čte na telefonu. Odrážky začínající „- “, bez nadpisů a tabulek v chatu.`;
 
 const POSTER_TOOL: Anthropic.Beta.BetaTool = {
   name: 'create_poster',
-  description: 'Vylepí výsledek rešerše jako plakátek, který se uživateli hned otevře a uloží do knihovny plakátků.',
+  description: 'Vylepí plakátek – z rešerše na webu, z podkladů od uživatele nebo z vlastních znalostí. Hned se uživateli otevře a uloží do knihovny plakátků.',
   input_schema: {
     type: 'object',
     properties: {
@@ -54,7 +56,7 @@ const POSTER_TOOL: Anthropic.Beta.BetaTool = {
       verdict: { type: 'string', description: 'Doporučení nebo závěr (nepovinné)' },
       sources: {
         type: 'array',
-        description: 'Použité zdroje',
+        description: 'Skutečně použité webové zdroje; bez hledání na webu prázdné (nevymýšlet)',
         items: {
           type: 'object',
           properties: { title: { type: 'string' }, url: { type: 'string' } },
@@ -63,14 +65,14 @@ const POSTER_TOOL: Anthropic.Beta.BetaTool = {
         },
       },
     },
-    required: ['topic', 'title', 'summary', 'sections', 'sources'],
+    required: ['topic', 'title', 'summary', 'sections'],
     additionalProperties: false,
   },
 };
 
 export const LEXA_TOOLS: Anthropic.Beta.BetaToolUnion[] = [
   // Haiku 5.5 používá základní verze webových nástrojů (bez dynamického filtrování).
-  { type: 'web_search_20250305', name: 'web_search', max_uses: MAX_SEARCHES, user_location: { type: 'approximate', city: 'Lipník nad Bečvou', region: 'Olomoucký kraj', country: 'CZ', timezone: 'Europe/Prague' } },
+  { type: 'web_search_20250305', name: 'web_search', max_uses: MAX_SEARCHES, user_location: { type: 'approximate', city: 'Lipník nad Bečvou', region: 'Olomoucký kraj', timezone: 'Europe/Prague' } },
   { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: MAX_FETCHES },
   POSTER_TOOL,
 ];
