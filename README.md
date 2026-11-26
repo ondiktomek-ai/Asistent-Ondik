@@ -106,6 +106,18 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
   změnit v `.env`: `JARVIS_OSLOVENI=pane`.
 
+## Automatické aktualizace
+
+- Městečko se **aktualizuje samo z GitHubu** – už není potřeba stahovat ZIP.
+  Při každém spuštění ikonou se spouštěč podívá, jestli na GitHubu není novější verze;
+  když ano, stáhne ji, přepíše zdrojové soubory (tvůj `.env`, `data/` a knihovny zůstanou),
+  sestaví ji a spustí. Trvá to chvilku déle než běžné spuštění (ukáže se okno se sestavováním).
+- Když městečko běží dlouho, Bit každou čtvrthodinu zkontroluje GitHub a při nové verzi
+  ukáže upozornění s tlačítkem **Aktualizovat** – městečko se samo aktualizuje, restartuje
+  a stránka se obnoví.
+- Bez internetu se prostě spustí stávající verze. Vypnutí: v `.env` řádek `AKTUALIZACE=ne`.
+- Nainstalovanou verzi si spouštěč pamatuje v souboru `.verze`.
+
 ## Autopilot – městečko jede samo
 
 - **Pozdrav po spuštění:** když městečko otevřeš ikonou, Jarvis tě sám přivítá hlášením

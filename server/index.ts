@@ -12,6 +12,7 @@ import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, save
 import { agenda } from './calendar.ts';
 import { deletePoster, getPoster, listPosters } from './lexa.ts';
 import { getSpend } from './usage.ts';
+import { localVersion, startUpdateNow, updateStatus } from './update.ts';
 import { DATA_DIR, readJson, writeJson } from './store.ts';
 import { addTile, deleteTile, listTiles, openOnPc, resetTiles, safeUrl } from './klik.ts';
 import { createBriefing, voiceContext } from './jarvis.ts';
@@ -101,6 +102,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
       connectedAgents: [...CONNECTED_AGENTS],
       google: await googleStatus().then((g) => ({ configured: g.configured, connected: g.connected })),
       activeAgents: ACTIVE_AGENTS,
+      version: localVersion(),
     });
   }
   // Návrat z přihlášení Googlu – prohlížeč sem přijde přesměrováním (bez hesla městečka),
@@ -168,6 +170,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
     }
     const p = await getPoster(lp[1]);
     return p ? json(res, 200, p) : json(res, 404, { error: 'Plakátek nenalezen.' });
+  }
+
+  // --- Aktualizace z GitHubu ---
+  if (url.pathname === '/api/update') {
+    if (req.method !== 'POST') return json(res, 200, await updateStatus());
+    if (!isLocal(req)) return json(res, 403, { error: 'Aktualizovat jde jen přímo z počítače s městečkem.' });
+    try {
+      startUpdateNow();
+      return json(res, 200, { ok: true });
+    } catch (err) {
+      return json(res, 400, { error: errorMessage(err) });
+    }
   }
 
   // --- Klik: spouštěč webů ---

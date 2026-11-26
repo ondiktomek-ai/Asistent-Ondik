@@ -13,6 +13,7 @@ import { digestState } from './reporter.ts';
 import { getWeather } from './weather.ts';
 import { googleStatus } from './google.ts';
 import { DATA_DIR, readJson, writeJson } from './store.ts';
+import { updateStatus, updatesEnabled } from './update.ts';
 
 export type CheckState = 'ok' | 'warn' | 'error' | 'info';
 
@@ -29,7 +30,7 @@ export interface Report {
   checkedAt: string;
   checks: Check[];
   /** Připomínky, které má Bit říkat a ukázat (např. přihlášení ke Googlu). */
-  alerts: { id: string; text: string; action?: 'google-login' }[];
+  alerts: { id: string; text: string; action?: 'google-login' | 'update' }[];
 }
 
 const startedAt = Date.now();
@@ -150,16 +151,28 @@ function checkServer(): Check {
   return { id: 'server', name: 'Server', state: 'info', detail: `Běží ${upText}, Node.js ${process.version}.` };
 }
 
+async function checkVersion(): Promise<{ check: Check; alert?: Report['alerts'][number] }> {
+  if (!updatesEnabled()) return { check: { id: 'verze', name: 'Verze', state: 'info', detail: 'Automatické aktualizace jsou vypnuté (AKTUALIZACE=ne).' } };
+  const u = await updateStatus();
+  if (!u.local) return { check: { id: 'verze', name: 'Verze', state: 'info', detail: 'Verze se zjistí při příštím spuštění ikonou na ploše (pak se aktualizuje sama).' } };
+  if (!u.latest) return { check: { id: 'verze', name: 'Verze', state: 'info', detail: `Verze ${u.local.slice(0, 7)} – GitHub se teď nepodařilo zkontrolovat.` } };
+  if (!u.available) return { check: { id: 'verze', name: 'Verze', state: 'ok', detail: `Nejnovější verze (${u.local.slice(0, 7)}).` } };
+  return {
+    check: { id: 'verze', name: 'Verze', state: 'warn', detail: `Je nová verze městečka (${u.latest.slice(0, 7)}).`, hint: 'Klikni na Aktualizovat, nebo městečko zavři a otevři ikonou.' },
+    alert: { id: `verze-${u.latest.slice(0, 7)}`, text: 'Je nová verze městečka – nainstaluju ji? 🚀', action: u.canUpdateNow ? 'update' : undefined },
+  };
+}
+
 let last: Report | null = null;
 let running: Promise<Report> | null = null;
 
 export async function runChecks(): Promise<Report> {
   running ??= (async () => {
-    const [api, news, digests, weather, google, data] = await Promise.all([checkApi(), checkNews(), checkDigests(), checkWeather(), checkGoogle(), checkData()]);
+    const [api, news, digests, weather, google, data, version] = await Promise.all([checkApi(), checkNews(), checkDigests(), checkWeather(), checkGoogle(), checkData(), checkVersion()]);
     last = {
       checkedAt: new Date().toISOString(),
-      checks: [api, google.check, news, digests, weather, data, checkServer()],
-      alerts: google.alert ? [google.alert] : [],
+      checks: [api, google.check, news, digests, weather, data, version.check, checkServer()],
+      alerts: [google.alert, version.alert].filter((a): a is NonNullable<typeof a> => !!a),
     };
     return last;
   })().finally(() => {

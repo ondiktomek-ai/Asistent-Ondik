@@ -2,6 +2,9 @@
 # 1) Pozná novou verzi (rozbalený ZIP): doinstaluje knihovny, sestaví ji a restartuje starý server.
 # 2) Pokud server neběží, spustí ho v minimalizovaném okně (zavřením toho okna městečko vypneš).
 # 3) Otevře městečko jako samostatné okno (Chrome/Edge v režimu aplikace) na zvoleném monitoru.
+# Na začátku se podívá na GitHub, jestli není nová verze, a když ano, sama ji stáhne.
+# -BezOkna: jen aktualizovat a restartovat server (tlačítko „Aktualizovat“ v městečku).
+param([switch]$BezOkna)
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
@@ -70,6 +73,9 @@ if (-not (Test-Path 'node_modules') -and -not (Test-Path 'dist\index.html')) {
   exit 1
 }
 
+# Nová verze na GitHubu? Stáhne se sama (sestavení a restart zařídí kód níže).
+try { [void](Aktualizuj $Root $nastaveni) } catch { }
+
 # Je potřeba něco aktualizovat?
 $otisk = Otisk-Zdroju $Root
 $otiskKnihoven = Otisk-Knihoven $Root
@@ -119,6 +125,9 @@ $chrome = @(
 )
 $prohlizece = if ($nastaveni['PROHLIZEC'] -eq 'chrome') { $chrome + $edge } else { $edge + $chrome }
 $prohlizec = $prohlizece | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+# aktualizace z městečka: okno už je otevřené a samo se obnoví
+if ($BezOkna) { exit 0 }
 
 if ($prohlizec) {
   # Vlastní profil: okno se nemíchá s běžným prohlížením a pamatuje si svou polohu.

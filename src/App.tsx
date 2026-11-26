@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBitStatus,
   fetchTeam,
+  startUpdate,
   onServerPc,
   fetchUsage,
   type SpendSummary,
@@ -229,6 +230,39 @@ export default function App() {
   // --- Chronos: připomínky 10 minut před událostí ---
   const { reminders, dismiss, events } = useReminders(serverOnline && !!status?.google?.connected);
 
+  // --- Aktualizace: spouštěč stáhne novou verzi, server se restartuje a stránka se sama obnoví ---
+  const [updating, setUpdating] = useState<string | null>(null);
+  const runUpdate = useCallback(() => {
+    const before = status?.version ?? null;
+    setUpdating('Stahuji novou verzi z GitHubu…');
+    startUpdate()
+      .then(() => {
+        const started = Date.now();
+        let wasDown = false;
+        const t = setInterval(() => {
+          void fetchStatus().then((st) => {
+            if (!st) {
+              wasDown = true;
+              setUpdating('Sestavuji a restartuji městečko… (může to trvat pár minut)');
+              return;
+            }
+            if ((st.version && st.version !== before) || (wasDown && st.version)) {
+              clearInterval(t);
+              setUpdating('Hotovo – načítám novou verzi…');
+              setTimeout(() => window.location.reload(), 800);
+            } else if (Date.now() - started > 10 * 60_000) {
+              clearInterval(t);
+              setUpdating(null);
+            }
+          });
+        }, 3000);
+      })
+      .catch((err: unknown) => {
+        setUpdating(null);
+        alert(err instanceof Error ? err.message : 'Aktualizace se nepodařila.');
+      });
+  }, [status?.version]);
+
   // --- Autopilot: Jarvis sám pozdraví po spuštění a ráno přednese hlášení ---
   const jarvisOpenRef = useRef(jarvisOpen);
   jarvisOpenRef.current = jarvisOpen;
@@ -421,6 +455,11 @@ export default function App() {
                       Přihlásit
                     </button>
                   )}
+                  {a.action === 'update' && (
+                    <button className="reminder-action" onClick={runUpdate}>
+                      Aktualizovat
+                    </button>
+                  )}
                   <button className="reminder-close" onClick={() => snooze(a.id)} aria-label="Připomenout později" title="Připomenout za 6 hodin">
                     ×
                   </button>
@@ -483,6 +522,15 @@ export default function App() {
           onCommandSent={() => setCommand(null)}
         />
       </main>
+      {updating && (
+        <div className="updating" role="status">
+          <div className="updating-box">
+            <span className="updating-spin" aria-hidden />
+            <strong>Aktualizuji městečko</strong>
+            <p>{updating}</p>
+          </div>
+        </div>
+      )}
       {jarvisOpen && (
         <JarvisOverlay
           auto={jarvisAuto}

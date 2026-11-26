@@ -8,6 +8,8 @@ export interface ServerStatus {
   connectedAgents: string[];
   activeAgents?: string[];
   google?: { configured: boolean; connected: boolean };
+  /** nainstalovaná verze (commit), null = neznámá */
+  version?: string | null;
 }
 
 export type ChatAttachment = { kind: 'lexa-poster'; id: string; title: string } | { kind: 'link'; id: string; title: string; url: string };
@@ -246,7 +248,7 @@ export interface BitCheck {
 export interface BitAlert {
   id: string;
   text: string;
-  action?: 'google-login';
+  action?: 'google-login' | 'update';
 }
 
 export interface BitReport {
@@ -379,3 +381,5 @@ export function launch(url: string): void {
   }
   request<{ ok: true }>('/api/klik/open', jsonInit('POST', { url })).catch(() => window.open(url, '_blank', 'noopener'));
 }
+
+export const startUpdate = () => request<{ ok: true }>('/api/update', { method: 'POST' });
