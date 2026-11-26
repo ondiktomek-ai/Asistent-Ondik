@@ -229,6 +229,12 @@ export async function generateDigest(): Promise<Digest> {
 // ---------------------------------------------------------------- plánování
 
 let started = false;
+/** Noční klid pro plakátky, např. ECHO_NOC=0-6 (od–do, hodiny). ECHO_NOC=ne = psát i v noci. */
+const [NIGHT_FROM, NIGHT_TO] = (() => {
+  const v = process.env.ECHO_NOC ?? '0-6';
+  const m = /^(\d{1,2})-(\d{1,2})$/.exec(v);
+  return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+})();
 
 export function startReporter() {
   if (started) return;
@@ -244,6 +250,9 @@ export function startReporter() {
   };
 
   const hourly = async () => {
+    // v noci (výchozí 0–6 h) plakátky nepíšeme – nikdo je nečte a stály by zbytečně
+    const hour = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Prague', hour: '2-digit', hour12: false }));
+    if (hour >= NIGHT_FROM && hour < NIGHT_TO) return;
     try {
       const d = await generateDigest();
       console.log(`[echo] plakátek: ${d.headline}`);

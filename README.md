@@ -106,6 +106,27 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
   změnit v `.env`: `JARVIS_OSLOVENI=pane`.
 
+## Autopilot – městečko jede samo
+
+- **Pozdrav po spuštění:** když městečko otevřeš ikonou, Jarvis tě sám přivítá hlášením
+  (nejvýš jednou za 3 hodiny, aby neotravoval).
+- **Ranní hlášení:** v nastavený čas (výchozí 7:00) se Jarvis ozve sám, když je městečko otevřené.
+- **Připomínky nahlas:** 10 minut před událostí z kalendáře Jarvis řekne, co tě čeká.
+- Zapíná se v nastavení Jarvise (⚙ → 🤖 Autopilot). Funguje na počítači; na telefonu Jarvis
+  sám nevyskakuje. Spouštěč okně dovoluje přehrát zvuk bez kliknutí – kdyby to prohlížeč
+  přesto nepovolil, Jarvis ukáže tlačítko „▶ Spustit hlášení“.
+- **Rychlé zadání:** nahoře v informačním panelu je pole „Zadej úkol týmu…“ – napíšeš úkol,
+  Enter, a Ondik se do toho pustí (zapojí kolegy). Klávesa **/** do pole skočí, **J** otevře Jarvise.
+- Echo v noci (0–6 h, `ECHO_NOC`) nepíše hodinové plakátky a chaty si posílají jen posledních
+  pár desítek zpráv – obojí šetří peníze.
+
+### Zakázaný mikrofon
+
+Když omylem zakážeš mikrofon, dvakrát klikni ve složce městečka na **Povolit-mikrofon.bat**.
+Zavře okno městečka, smaže jeho uložená oprávnění (a zapamatovanou polohu okna – jednou ho
+přetáhni zpátky na monitor) a městečko znovu otevře. Pak u Jarvise klikni na mikrofon a dej
+**Povolit**. Chaty, paměť ani nastavení se nesmažou.
+
 ## Klik – spouštěč webů
 
 - Robot Klik bydlí v boxu-kině. Jeho panel začíná **dlaždicemi**: YouTube, Spotify, Google,

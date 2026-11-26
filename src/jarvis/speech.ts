@@ -105,6 +105,8 @@ export class Speaker {
   voice: SpeechSynthesisVoice | null = null;
   rate = 1.05;
   muted = false;
+  /** prohlížeč nedovolil mluvit (stránka se zatím nikdo nedotkl) */
+  blocked = false;
   private token = 0;
   private queue: Promise<void> = Promise.resolve();
 
@@ -196,7 +198,10 @@ export class Speaker {
         onChar(e.charIndex);
       };
       u.onend = finish;
-      u.onerror = finish;
+      u.onerror = (e) => {
+        if (e.error === 'not-allowed') this.blocked = true;
+        finish();
+      };
       speechSynthesis.speak(u);
       // Chrome občas zůstane „pozastavený“
       if (speechSynthesis.paused) speechSynthesis.resume();
@@ -237,8 +242,21 @@ export function micUnavailableReason(): string | null {
   return null;
 }
 
+/** Hláška, když je mikrofon v prohlížeči zakázaný (Jarvis k ní ukáže návod). */
+export const MIC_DENIED = 'Mikrofon je v okně městečka zakázaný.';
+
+/** Je mikrofon pro tuto stránku zakázaný? (null = nevíme) */
+export async function micPermission(): Promise<'granted' | 'denied' | 'prompt' | null> {
+  try {
+    const st = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    return st.state;
+  } catch {
+    return null;
+  }
+}
+
 const MIC_ERRORS: Record<string, string> = {
-  'not-allowed': 'Prohlížeč nepovolil mikrofon. Povol ho kliknutím na ikonu zámku vedle adresy.',
+  'not-allowed': MIC_DENIED,
   'service-not-allowed': 'Prohlížeč nepovolil rozpoznávání řeči.',
   'audio-capture': 'Nenašel jsem mikrofon. Je připojený?',
   network: 'Rozpoznávání řeči potřebuje internet a teď se nepovedlo.',

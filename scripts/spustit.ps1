@@ -125,7 +125,8 @@ if ($prohlizec) {
   # Edge a Chrome nesmí sdílet jeden profil – každý má svou složku.
   $slozka = if ($prohlizec -match 'msedge') { 'okno-edge' } else { 'okno' }
   $okno = Join-Path $env:LOCALAPPDATA "MesteckoOndik\$slozka"
-  $argumenty = @("--app=$url", "--user-data-dir=`"$okno`"", '--no-first-run', '--no-default-browser-check')
+  # autoplay: Jarvis smí sám promluvit (autopilot – pozdrav po spuštění, ranní hlášení, připomínky)
+  $argumenty = @("--app=$url", "--user-data-dir=`"$okno`"", '--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required')
   if ($nastaveni['OKNO_POZICE'] -match '^-?\d+,-?\d+$') { $argumenty += "--window-position=$($nastaveni['OKNO_POZICE'])" }
   if ($nastaveni['OKNO_CELA_OBRAZOVKA'] -eq 'ano') { $argumenty += '--start-fullscreen' }
   Start-Process -FilePath $prohlizec -ArgumentList $argumenty

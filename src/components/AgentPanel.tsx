@@ -49,6 +49,9 @@ interface AgentPanelProps {
   onOpenResearch: (id: string) => void;
   /** Mění se po vytvoření nového plakátku. */
   researchRefresh: number;
+  /** Úkol zadaný z informačního panelu – Ondikův chat ho hned odešle. */
+  command?: { id: number; text: string } | null;
+  onCommandSent?: () => void;
 }
 
 export function AgentPanel({
@@ -66,6 +69,8 @@ export function AgentPanel({
   onGoogleLogin,
   onOpenResearch,
   researchRefresh,
+  command,
+  onCommandSent,
 }: AgentPanelProps) {
   const openAttachment = (a: ChatAttachment) => {
     if (a.kind === 'lexa-poster') onOpenResearch(a.id);
@@ -78,6 +83,12 @@ export function AgentPanel({
   if ((agent?.id ?? null) !== tabAgent) {
     setTabAgent(agent?.id ?? null);
     setTab(firstTab(agent?.id));
+  }
+  // úkol z informačního panelu: ukaž chat, kde se odešle
+  const [seenCommand, setSeenCommand] = useState<number | null>(null);
+  if (command && command.id !== seenCommand) {
+    setSeenCommand(command.id);
+    if (tab !== 'chat') setTab('chat');
   }
   const sideTab = agent ? SIDE_TABS[agent.id] : undefined;
   const googleOk = !!status?.google?.connected;
@@ -189,6 +200,8 @@ export function AgentPanel({
                     onBusyChange={(b) => onBusyChange(agent.id, b)}
                     onActivity={(l) => onActivity(agent.id, l)}
                     onOpenAttachment={openAttachment}
+                    autoSend={agent.id === 'ondik' ? command : null}
+                    onAutoSent={onCommandSent}
                   />
                 ) : agent.id === 'echo' ? (
                   <ReporterPanel newsroom={newsroom} serverOnline={serverOnline} onOpenPoster={onOpenPoster} />
@@ -214,15 +227,6 @@ export function AgentPanel({
               <section className="chat-section">
                 <Chat key={agent.id} agent={agent} status={status} onStatusChange={onStatusChange} onBusyChange={(b) => onBusyChange(agent.id, b)} />
               </section>
-              {agent.theme === 'townhall' && (
-                <div className="jarvis-card">
-                  <div className="jarvis-orb" aria-hidden />
-                  <div>
-                    <strong>Brzy Jarvis</strong>
-                    <p>Ondik se na radnici promění v Jarvise: budeš s ním mluvit hlasem a zavolá ti, když bude něco důležitého.</p>
-                  </div>
-                </div>
-              )}
               <details className="about">
                 <summary>O agentovi</summary>
                 {details}

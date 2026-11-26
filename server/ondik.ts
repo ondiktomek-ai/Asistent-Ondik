@@ -296,6 +296,19 @@ async function askColleague(fromId: string, toId: string, task: string, o: RunOp
   }
 }
 
+const HISTORY_MAX = 120;
+const HISTORY_KEEP = 50;
+
+/** Zkrátí historii pro API: začne na skutečné otázce uživatele (ne uprostřed práce s nástroji). */
+export function trimHistory(api: Anthropic.Beta.BetaMessageParam[]): Anthropic.Beta.BetaMessageParam[] {
+  if (api.length <= HISTORY_MAX) return api;
+  for (let i = api.length - HISTORY_KEEP; i < api.length; i++) {
+    const m = api[i];
+    if (m.role === 'user' && typeof m.content === 'string') return api.slice(i);
+  }
+  return [];
+}
+
 /** Pošle zprávu agentovi, streamuje odpověď a uloží konverzaci. Vrací celý text odpovědi. */
 export async function chatWithAgent(agentId: string, text: string, { onText, onTool, onAttachment, signal, extraContext }: ChatHandlers): Promise<string> {
   const cfg = CHAT_AGENTS[agentId];
@@ -305,8 +318,10 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
   try {
     const conv = await loadConversation(agentId);
     // Historie se jen přidává (nic se v ní nepřepisuje), podklady jdou jako systémová zpráva za otázkou.
+    // Aby každá další otázka nebyla dražší a dražší, nechá se jen posledních pár desítek zpráv –
+    // zkracuje se po větších kusech (jednou za čas), ať se dál dobře využívá cache.
     const messages: Anthropic.Beta.BetaMessageParam[] = [
-      ...conv.api,
+      ...trimHistory(conv.api),
       { role: 'user', content: text },
       { role: 'system', content: `${await cfg.context()}\n\n${await teamContext()}${extraContext ? `\n\n${extraContext}` : ''}` },
     ];
@@ -314,7 +329,7 @@ export async function chatWithAgent(agentId: string, text: string, { onText, onT
     const at = new Date().toISOString();
     await saveConversation(agentId, {
       api: messages,
-      display: [...conv.display, { role: 'user', text, at }, { role: 'assistant', text: reply, at: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) }],
+      display: [...conv.display, { role: 'user' as const, text, at }, { role: 'assistant' as const, text: reply, at: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) }].slice(-300),
     });
     return reply;
   } finally {

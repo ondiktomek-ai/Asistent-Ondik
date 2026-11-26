@@ -386,8 +386,15 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
 }
 
 async function serveStatic(res: ServerResponse, url: URL) {
-  let file = path.join(DIST, decodeURIComponent(url.pathname));
-  if (!file.startsWith(DIST)) return json(res, 403, { error: 'Zakázáno.' });
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return json(res, 400, { error: 'Neplatná adresa.' });
+  }
+  let file = path.join(DIST, pathname);
+  // jen soubory uvnitř dist/ (ne sousední složky se stejným začátkem názvu)
+  if (file !== DIST && !file.startsWith(DIST + path.sep)) return json(res, 403, { error: 'Zakázáno.' });
   try {
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
   } catch {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBitStatus,
   fetchTeam,
+  onServerPc,
   fetchUsage,
   type SpendSummary,
   type TeamTask,
@@ -21,6 +22,8 @@ import { useReminders } from './hooks/useReminders';
 import { NewsBar } from './components/NewsBar';
 import { InfoPanel, type TownItem } from './components/InfoPanel';
 import { JarvisOverlay, type JarvisPhase } from './jarvis/JarvisOverlay';
+import { loadAutopilot, takeMorningBriefing, takeStartGreeting } from './jarvis/autopilot';
+import { Speaker, loadSettings as loadVoiceSettings, loadVoices, pickVoice } from './jarvis/speech';
 import { ResearchPosterView } from './components/ResearchPosterView';
 import { DigestPoster } from './components/DigestPoster';
 import { AGENTS, AGENT_BY_ID } from './world/agents';
@@ -80,10 +83,18 @@ export default function App() {
   const [jarvisOpen, setJarvisOpen] = useState(false);
   const [jarvisState, setJarvisState] = useState<{ phase: JarvisPhase; label?: string } | null>(null);
   const onJarvisPhase = useCallback((phase: JarvisPhase | null, label?: string) => setJarvisState(phase ? { phase, label } : null), []);
-  const openJarvis = () => {
+  const [jarvisAuto, setJarvisAuto] = useState(false);
+  const openJarvis = useCallback((auto = false) => {
     setSelectedId(null);
+    setJarvisAuto(auto);
     setJarvisOpen(true);
-  };
+  }, []);
+  // rychlé zadání úkolu odkudkoli (informační panel) → Ondik
+  const [command, setCommand] = useState<{ id: number; text: string } | null>(null);
+  const sendCommand = useCallback((text: string) => {
+    setSelectedId('ondik');
+    setCommand({ id: Date.now(), text });
+  }, []);
 
   // --- Echo: zprávy, počasí, plakátky ---
   const serverOnline = !!status && (!status.authRequired || status.authorized);
@@ -218,6 +229,43 @@ export default function App() {
   // --- Chronos: připomínky 10 minut před událostí ---
   const { reminders, dismiss, events } = useReminders(serverOnline && !!status?.google?.connected);
 
+  // --- Autopilot: Jarvis sám pozdraví po spuštění a ráno přednese hlášení ---
+  const jarvisOpenRef = useRef(jarvisOpen);
+  jarvisOpenRef.current = jarvisOpen;
+  const ready = serverOnline && !!status?.ready;
+  useEffect(() => {
+    // jen na počítači s městečkem – na telefonu by Jarvis vyskakoval při každém otevření
+    if (!ready || !onServerPc()) return;
+    // chvilku počkáme, ať se městečko načte
+    const first = setTimeout(() => {
+      if (!jarvisOpenRef.current && takeStartGreeting()) openJarvis(true);
+    }, 2500);
+    const t = setInterval(() => {
+      if (!jarvisOpenRef.current && takeMorningBriefing()) openJarvis(true);
+    }, 30_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+    };
+  }, [ready, openJarvis]);
+
+  // připomínky z kalendáře Jarvis řekne nahlas
+  const reminderVoice = useRef<Speaker | null>(null);
+  const spoken = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh = reminders.filter((r) => !spoken.current.has(r.id + r.start));
+    if (!fresh.length) return;
+    fresh.forEach((r) => spoken.current.add(r.id + r.start));
+    if (!loadAutopilot().speakReminders || jarvisOpenRef.current) return;
+    void (async () => {
+      const sp = (reminderVoice.current ??= new Speaker());
+      const vs = loadVoiceSettings();
+      sp.voice = pickVoice(await loadVoices(), vs.voiceURI);
+      sp.rate = vs.rate;
+      for (const r of fresh) await sp.say(`Pane, za ${r.minutes} ${r.minutes === 1 ? 'minutu' : r.minutes < 5 ? 'minuty' : 'minut'} vás čeká ${r.summary}.`);
+    })();
+  }, [reminders]);
+
   // --- Lexa: plakátky z rešerší ---
   const [research, setResearch] = useState<ResearchPoster | null>(null);
   const [researchRefresh, setResearchRefresh] = useState(0);
@@ -279,10 +327,19 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setSelectedId(null);
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+      if (typing || e.ctrlKey || e.metaKey || e.altKey || jarvisOpenRef.current) return;
+      if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        openJarvis();
+      } else if (e.key === '/') {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('.info-command input')?.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [openJarvis]);
 
   return (
     <div className="app">
@@ -308,7 +365,7 @@ export default function App() {
           ))}
         </nav>
         <div className="hud-right">
-          <button className={`jarvis-btn${jarvisOpen ? ' on' : ''}`} onClick={openJarvis} title="Jarvis: mluvené hlášení a hlasový rozhovor">
+          <button className={`jarvis-btn${jarvisOpen ? ' on' : ''}`} onClick={() => openJarvis()} title="Jarvis: mluvené hlášení a hlasový rozhovor">
             <span className="jarvis-btn-orb" aria-hidden />
             Jarvis
           </button>
@@ -349,7 +406,7 @@ export default function App() {
           <div className="world-hint">Táhni = otočit · kolečko = přiblížit · klik na box = detail</div>
           {research && <ResearchPosterView poster={research} onClose={() => setResearch(null)} />}
           <NewsBar newsroom={newsroom} serverOnline={serverOnline} onOpenEcho={() => setSelectedId('echo')} />
-          {poster && <DigestPoster digest={poster} onClose={closePoster} />}
+          {poster && !jarvisOpen && <DigestPoster digest={poster} onClose={closePoster} />}
           {(reminders.length > 0 || visibleAlerts.length > 0) && (
             <div className="reminders" role="status">
               {visibleAlerts.map((a) => (
@@ -400,6 +457,7 @@ export default function App() {
           calendarConnected={!!status?.google?.connected}
           bitReport={bitReport}
           lastResearch={lastResearch}
+          onCommand={serverOnline ? sendCommand : undefined}
           teamActive={teamActive}
           spend={spend}
           onSelect={setSelectedId}
@@ -421,10 +479,13 @@ export default function App() {
           onGoogleLogin={googleLogin}
           onOpenResearch={openResearch}
           researchRefresh={researchRefresh}
+          command={selectedId === 'ondik' ? command : null}
+          onCommandSent={() => setCommand(null)}
         />
       </main>
       {jarvisOpen && (
         <JarvisOverlay
+          auto={jarvisAuto}
           serverOnline={serverOnline}
           onClose={() => setJarvisOpen(false)}
           onPhase={onJarvisPhase}

@@ -11,6 +11,9 @@ interface ChatProps {
   onActivity?: (label: string | null) => void;
   /** Otevřít přílohu (plakátek z rešerše). */
   onOpenAttachment?: (a: ChatAttachment) => void;
+  /** Zpráva k okamžitému odeslání (rychlé zadání z informačního panelu). */
+  autoSend?: { id: number; text: string } | null;
+  onAutoSent?: () => void;
 }
 
 /** Zobrazení textu odpovědi: odstavce, odrážky a **tučné**. Bez HTML z modelu. */
@@ -74,7 +77,7 @@ const CHAT_HINTS: Record<string, string> = {
   echo: 'Zeptej se na zprávy nebo počasí. Třeba „Co je nového v regionu?“ nebo „Bude zítra v Lipníku pršet?“',
 };
 
-export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, onOpenAttachment }: ChatProps) {
+export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, onOpenAttachment, autoSend, onAutoSent }: ChatProps) {
   const [activity, setActivity] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -87,12 +90,24 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, 
   const needsLogin = status?.authRequired && !status.authorized;
   const canChat = status?.ready && !needsLogin;
 
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!canChat) return;
     fetchHistory(agent.id)
       .then((h) => setMessages(h.messages))
-      .catch((e: ApiError) => setError(e.message));
+      .catch((e: ApiError) => setError(e.message))
+      .finally(() => setLoaded(true));
   }, [agent.id, canChat]);
+
+  // rychlé zadání z informačního panelu: odešli, jakmile je načtená historie
+  const handledAuto = useRef<number | null>(null);
+  useEffect(() => {
+    if (!autoSend || !loaded || streaming !== null || handledAuto.current === autoSend.id) return;
+    handledAuto.current = autoSend.id;
+    onAutoSent?.();
+    void send(undefined, autoSend.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSend, loaded, streaming]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -100,11 +115,11 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, 
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  async function send(e?: FormEvent) {
+  async function send(e?: FormEvent, override?: string) {
     e?.preventDefault();
-    const text = draft.trim();
+    const text = (override ?? draft).trim();
     if (!text || streaming !== null) return;
-    setDraft('');
+    if (override === undefined) setDraft('');
     setError(null);
     setMessages((m) => [...m, { role: 'user', text, at: new Date().toISOString() }]);
     setStreaming('');
@@ -138,7 +153,7 @@ export function Chat({ agent, status, onStatusChange, onBusyChange, onActivity, 
     } catch (err) {
       if (abort.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Něco se pokazilo.');
-      setDraft(text);
+      setDraft(text); // ať se zpráva neztratí – jde poslat znovu
       setMessages((m) => m.slice(0, -1));
       if (err instanceof ApiError && err.status === 401) onStatusChange();
     } finally {

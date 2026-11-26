@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { BitReport, CalEvent, Digest, SpendSummary, TeamTask } from '../api';
 import type { Newsroom } from '../hooks/useNewsroom';
 import { AGENT_BY_ID } from '../world/agents';
@@ -27,6 +28,8 @@ interface InfoPanelProps {
   teamActive: TeamTask[];
   /** Odhad útraty za Claude API. */
   spend: SpendSummary | null;
+  /** Rychlé zadání úkolu týmu (Ondikovi). */
+  onCommand?: (text: string) => void;
   onSelect: (id: string) => void;
   onOpenPoster: () => void;
   onOpenResearch: (id: string) => void;
@@ -37,6 +40,7 @@ const todayYmd = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/
 /** Informační panel vpravo: čas a počasí, co se právě děje, co je dnes na práci, stav a plakátky. */
 export function InfoPanel(p: InfoPanelProps) {
   const { time, newsroom } = p;
+  const [cmd, setCmd] = useState('');
   const w = newsroom.weather;
   const today = w?.daily[0];
   const ymd = todayYmd(time);
@@ -85,6 +89,21 @@ export function InfoPanel(p: InfoPanelProps) {
           </button>
         )}
       </header>
+
+      {p.onCommand && (
+        <form
+          className="info-command"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const t = cmd.trim();
+            if (!t) return;
+            setCmd('');
+            p.onCommand?.(t);
+          }}
+        >
+          <input value={cmd} onChange={(e) => setCmd(e.target.value)} placeholder="💬 Zadej úkol týmu…  ( / )" aria-label="Úkol pro Ondika a tým" />
+        </form>
+      )}
 
       <div className="info-body">
         <section>

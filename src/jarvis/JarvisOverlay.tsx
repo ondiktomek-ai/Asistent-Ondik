@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBriefing, launch, onServerPc, sendMessage, type Briefing, type BriefingSegment, type ChatAttachment, type SegmentKind } from '../api';
 import { JarvisOrb, type OrbState } from './JarvisOrb';
+import { canAutoplay, loadAutopilot, saveAutopilot, type AutopilotSettings } from './autopilot';
 import { IntroMusic, deleteIntro, fetchIntroInfo, loadIntroSettings, saveIntroSettings, uploadIntro, type IntroInfo, type IntroSettings } from './intro';
-import { Speaker, chime, czechVoices, listen, loadSettings, loadVoices, micUnavailableReason, pickVoice, saveSettings, speakable, ttsSupported, type VoiceSettings } from './speech';
+import { MIC_DENIED, Speaker, chime, czechVoices, listen, loadSettings, loadVoices, micPermission, micUnavailableReason, pickVoice, saveSettings, speakable, ttsSupported, type VoiceSettings } from './speech';
 
-export type JarvisPhase = 'preparing' | 'speaking' | 'listening' | 'thinking' | 'idle' | 'error';
+export type JarvisPhase = 'tap' | 'preparing' | 'speaking' | 'listening' | 'thinking' | 'idle' | 'error';
 
 const KIND_LABEL: Record<SegmentKind, string> = {
   uvod: 'Úvod',
@@ -25,6 +26,8 @@ interface Props {
   onClose: () => void;
   onPhase: (phase: JarvisPhase | null, label?: string) => void;
   onOpenResearch: (id: string) => void;
+  /** Otevřel ho autopilot (bez kliknutí) – když prohlížeč nedovolí zvuk, počká na klepnutí. */
+  auto?: boolean;
 }
 
 interface Exchange {
@@ -33,7 +36,7 @@ interface Exchange {
 }
 
 /** Celoobrazovkový Jarvis: mluvené hlášení a hlasový rozhovor. */
-export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }: Props) {
+export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, auto = false }: Props) {
   const speaker = useRef(new Speaker()).current;
   const mic = useRef({ level: 0 }).current;
   const music = useRef(new IntroMusic()).current;
@@ -65,6 +68,19 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   const [introInfo, setIntroInfo] = useState<IntroInfo | null>(null);
   const introInfoRef = useRef<IntroInfo | null>(null);
   const [introBusy, setIntroBusy] = useState<string | null>(null);
+  const [autopilot, setAutopilot] = useState<AutopilotSettings>(loadAutopilot);
+  const [micDenied, setMicDeniedState] = useState(false);
+  const micDeniedRef = useRef(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const setMicDenied = useCallback((v: boolean) => {
+    micDeniedRef.current = v;
+    setMicDeniedState(v);
+  }, []);
+  // zakázaný mikrofon poznáme hned (a ukážeme návod, místo marného poslouchání)
+  useEffect(() => {
+    void micPermission().then((st) => st === 'denied' && setMicDenied(true));
+  }, [setMicDenied]);
+  const resumeAt = useRef<{ b: Briefing; i: number } | null>(null);
   const [now, setNow] = useState(() => new Date());
   const micReason = useMemo(micUnavailableReason, []);
 
@@ -111,6 +127,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
     music.fadeOut(400); // mikrofon by jinak slyšel hudbu
     const id = run.current;
     setError(null);
+    setMicDenied(false);
     setInterim('');
     setToolLabel(null);
     setPhase('listening');
@@ -126,7 +143,11 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
         onNothing: (err) => {
           if (id !== run.current) return;
           setInterim('');
-          if (err) setError(err);
+          if (err === MIC_DENIED) {
+            setMicDenied(true);
+            setHelpOpen(true);
+          }
+          else if (err) setError(err);
           setPhase('idle');
         },
       },
@@ -202,7 +223,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
         if (id !== run.current) return;
         setToolLabel(null);
         // rozhovor pokračuje: Jarvis zase poslouchá (když je ticho, přestane)
-        if (!micReason) startListening();
+        if (!micReason && !micDeniedRef.current) startListening();
         else setPhase('idle');
       } catch (err) {
         if (id !== run.current || ctrl.signal.aborted) return;
@@ -229,11 +250,18 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
         setPhase('speaking');
         await speaker.say(seg.say, (f) => id === run.current && setSubtitle({ text: seg.text, progress: f, who: 'jarvis' }));
         if (id !== run.current) return;
+        if (speaker.blocked) {
+          // prohlížeč nedovolil mluvit bez kliknutí – počkáme na klepnutí a pokračujeme od této části
+          resumeAt.current = { b, i };
+          music.stop();
+          setPhase('tap');
+          return;
+        }
         if (i === from) music.fadeOut(3500); // úvodní hudba po první větě dozní
         await new Promise((r) => setTimeout(r, 280));
       }
       if (id !== run.current) return;
-      if (!micReason) startListening();
+      if (!micReason && !micDeniedRef.current) startListening();
       else setPhase('idle');
     },
     [halt, speaker, setPhase, micReason, startListening],
@@ -287,6 +315,22 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   // start: po otevření rovnou hlášení
   useEffect(() => {
     if (serverOnline) {
+      void begin();
+    } else {
+      setError('Jarvis běží na tvém počítači – spusť městečko ikonou na ploše.');
+      setPhase('error');
+    }
+    // jen při otevření
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Zahájení: zjistí úvodní hudbu a spustí hlášení (u autopilota jen, když prohlížeč dovolí zvuk). */
+  const begin = useCallback(async () => {
+    if (auto && !(await canAutoplay())) {
+      setPhase('tap');
+      return;
+    }
+    {
       void fetchIntroInfo()
         .catch(() => null)
         .then((info) => {
@@ -295,13 +339,29 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
           return info && introRef.current.on ? music.load() : false;
         })
         .then(() => fetchBriefing());
-    } else {
-      setError('Jarvis běží na tvém počítači – spusť městečko ikonou na ploše.');
-      setPhase('error');
     }
-    // jen při otevření
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auto]);
+
+  /** Klepnutí, když prohlížeč čekal na souhlas se zvukem. */
+  const tapToStart = () => {
+    speaker.blocked = false;
+    const r = resumeAt.current;
+    resumeAt.current = null;
+    if (r) void play(r.b, r.i);
+    else if (briefingRef.current) void play(briefingRef.current);
+    else {
+      void fetchIntroInfo()
+        .catch(() => null)
+        .then((info) => {
+          introInfoRef.current = info;
+          setIntroInfo(info);
+          return info && introRef.current.on ? music.load() : false;
+        })
+        .then(() => fetchBriefing());
+    }
+  };
+  useEffect(() => saveAutopilot(autopilot), [autopilot]);
 
   useEffect(() => {
     if (phase !== 'preparing') return;
@@ -359,7 +419,9 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   const czech = czechVoices(voices);
   const noCzechVoice = ttsSupported() && voices.length > 0 && !czech.length;
   const statusText =
-    phase === 'preparing'
+    phase === 'tap'
+      ? 'Jarvis má pro vás hlášení'
+      : phase === 'preparing'
       ? PREP_LINES[prepLine]
       : phase === 'listening'
         ? interim || 'Poslouchám…'
@@ -432,6 +494,28 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
           >
             ▶ Vyzkoušet hlas
           </button>
+          <div className="jarvis-intro">
+            <strong>🤖 Autopilot</strong>
+            <label className="jarvis-check">
+              <input type="checkbox" checked={autopilot.greetOnStart} onChange={(e) => setAutopilot((a) => ({ ...a, greetOnStart: e.target.checked }))} />
+              Pozdravit hlášením po spuštění městečka (nejvýš jednou za 3 h)
+            </label>
+            <label className="jarvis-check">
+              <input type="checkbox" checked={!!autopilot.morning} onChange={(e) => setAutopilot((a) => ({ ...a, morning: e.target.checked ? '07:00' : '' }))} />
+              Ranní hlášení v
+              <input
+                type="time"
+                value={autopilot.morning}
+                disabled={!autopilot.morning}
+                onChange={(e) => setAutopilot((a) => ({ ...a, morning: e.target.value }))}
+                aria-label="Čas ranního hlášení"
+              />
+            </label>
+            <label className="jarvis-check">
+              <input type="checkbox" checked={autopilot.speakReminders} onChange={(e) => setAutopilot((a) => ({ ...a, speakReminders: e.target.checked }))} />
+              Říkat nahlas připomínky z kalendáře
+            </label>
+          </div>
           <div className="jarvis-intro">
             <strong>🎸 Úvodní hudba</strong>
             {introInfo ? (
@@ -588,7 +672,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
           )}
         </aside>
 
-        <section className="jarvis-center">
+        <section className={`jarvis-center${helpOpen && micDenied ? ' with-help' : ''}`}>
           <div className="jv-orb">
             <JarvisOrb state={orbState} level={level} />
           </div>
@@ -603,9 +687,44 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
               </p>
             )}
           </div>
+          {phase === 'tap' && (
+            <button className="jarvis-tap-btn" onClick={tapToStart} autoFocus>
+              ▶ Spustit hlášení
+            </button>
+          )}
           {error && (
-            <div className="jarvis-error" role="alert">
+            <div className="jarvis-error-box" role="alert">
               {error}
+            </div>
+          )}
+          {micDenied && !helpOpen && (
+            <button className="jarvis-help-toggle" onClick={() => setHelpOpen(true)}>
+              🎙️ Mikrofon je zakázaný – jak ho povolit ▸
+            </button>
+          )}
+          {micDenied && helpOpen && (
+            <div className="jarvis-help" role="alert">
+              <strong>🎙️ Mikrofon je zakázaný – takhle ho znovu povolíš:</strong>
+              <ol>
+                <li>
+                  Nejjednodušší: ve složce městečka dvakrát klikni na <b>Povolit-mikrofon.bat</b>. Zavře okno, smaže uložená oprávnění a městečko znovu otevře – pak u
+                  Jarvise klikni na mikrofon a dej <b>Povolit</b>.
+                </li>
+                <li>
+                  Nebo v okně městečka: <b>⋯</b> vpravo nahoře → <b>Oprávnění webu</b> (případně <b>Informace o aplikaci</b>) → Mikrofon → <b>Povolit</b> a stiskni <b>F5</b>.
+                </li>
+                <li>Když to ani tak nejde: Windows → Nastavení → Ochrana osobních údajů → Mikrofon → zapnout přístup pro aplikace (i klasické).</li>
+              </ol>
+              <button
+                onClick={() => {
+                  setHelpOpen(false);
+                  setMicDenied(false);
+                  startListening();
+                }}
+              >
+                Zkusit znovu
+              </button>
+              <button onClick={() => setHelpOpen(false)}>Skrýt</button>
             </div>
           )}
         </section>
