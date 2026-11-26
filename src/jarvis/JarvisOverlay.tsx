@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBriefing, launch, onServerPc, sendMessage, type Briefing, type BriefingSegment, type ChatAttachment, type SegmentKind } from '../api';
 import { JarvisOrb, type OrbState } from './JarvisOrb';
+import { IntroMusic, deleteIntro, fetchIntroInfo, loadIntroSettings, saveIntroSettings, uploadIntro, type IntroInfo, type IntroSettings } from './intro';
 import { Speaker, chime, czechVoices, listen, loadSettings, loadVoices, micUnavailableReason, pickVoice, saveSettings, speakable, ttsSupported, type VoiceSettings } from './speech';
 
 export type JarvisPhase = 'preparing' | 'speaking' | 'listening' | 'thinking' | 'idle' | 'error';
@@ -35,6 +36,7 @@ interface Exchange {
 export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }: Props) {
   const speaker = useRef(new Speaker()).current;
   const mic = useRef({ level: 0 }).current;
+  const music = useRef(new IntroMusic()).current;
   const [phase, setPhaseState] = useState<JarvisPhase>('preparing');
   const phaseRef = useRef<JarvisPhase>('preparing');
   const setPhase = useCallback((p: JarvisPhase) => {
@@ -42,7 +44,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
     setPhaseState(p);
   }, []);
   // koule čte hlasitost: při poslechu z mikrofonu, jinak z hlasu
-  const level = useMemo(() => ({ get level() { return phaseRef.current === 'listening' ? mic.level : speaker.level; } }), [mic, speaker]);
+  const level = useMemo(() => ({ get level() { return phaseRef.current === 'listening' ? mic.level : Math.max(speaker.level, music.level); } }), [mic, speaker, music]);
 
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [segIndex, setSegIndex] = useState(-1);
@@ -57,6 +59,12 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   const [showSettings, setShowSettings] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [settings, setSettings] = useState<VoiceSettings>(loadSettings);
+  const [intro, setIntro] = useState<IntroSettings>(loadIntroSettings);
+  const introRef = useRef(intro);
+  introRef.current = intro;
+  const [introInfo, setIntroInfo] = useState<IntroInfo | null>(null);
+  const introInfoRef = useRef<IntroInfo | null>(null);
+  const [introBusy, setIntroBusy] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const micReason = useMemo(micUnavailableReason, []);
 
@@ -100,6 +108,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
       return;
     }
     halt();
+    music.fadeOut(400); // mikrofon by jinak slyšel hudbu
     const id = run.current;
     setError(null);
     setInterim('');
@@ -129,6 +138,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   const ask = useCallback(
     async (question: string) => {
       halt();
+      music.fadeOut(400);
       const id = run.current;
       const ctrl = new AbortController();
       abort.current = ctrl;
@@ -219,6 +229,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
         setPhase('speaking');
         await speaker.say(seg.say, (f) => id === run.current && setSubtitle({ text: seg.text, progress: f, who: 'jarvis' }));
         if (id !== run.current) return;
+        if (i === from) music.fadeOut(3500); // úvodní hudba po první větě dozní
         await new Promise((r) => setTimeout(r, 280));
       }
       if (id !== run.current) return;
@@ -235,15 +246,28 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
     setError(null);
     setSubtitle(null);
     setSegIndex(-1);
-    chime('start');
+    // úvodní hudba hraje, zatímco se hlášení připravuje
+    const withMusic = introRef.current.on && !!introInfoRef.current;
+    if (withMusic) void music.start(introRef.current.volume);
+    else chime('start');
     try {
       const [b, vs] = await Promise.all([createBriefing(), loadVoices()]);
       if (id !== run.current) return;
       setVoices(vs);
       briefingRef.current = b;
       setBriefing(b);
+      if (music.playing) {
+        // hudba hraje naplno nastavenou dobu, pak se ztlumí pod hlas
+        const wait = introRef.current.seconds - music.elapsed();
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait * 1000));
+        if (id !== run.current) return;
+        music.duck();
+        await new Promise((r) => setTimeout(r, 700));
+        if (id !== run.current) return;
+      }
       void play(b);
     } catch (err) {
+      music.fadeOut(1000);
       if (id !== run.current) return;
       setError(err instanceof Error ? err.message : 'Hlášení se nepodařilo připravit.');
       setPhase('error');
@@ -262,8 +286,16 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
 
   // start: po otevření rovnou hlášení
   useEffect(() => {
-    if (serverOnline) void fetchBriefing();
-    else {
+    if (serverOnline) {
+      void fetchIntroInfo()
+        .catch(() => null)
+        .then((info) => {
+          introInfoRef.current = info;
+          setIntroInfo(info);
+          return info && introRef.current.on ? music.load() : false;
+        })
+        .then(() => fetchBriefing());
+    } else {
       setError('Jarvis běží na tvém počítači – spusť městečko ikonou na ploše.');
       setPhase('error');
     }
@@ -278,11 +310,15 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
   }, [phase]);
 
   // klávesy: Esc = zavřít, mezerník = mluvit/přestat
+  useEffect(() => () => music.stop(), [music]);
+  useEffect(() => saveIntroSettings(intro), [intro]);
+
   const close = useCallback(() => {
     halt();
+    music.stop();
     chime('end');
     onClose();
-  }, [halt, onClose]);
+  }, [halt, onClose, music]);
   const toggleMic = useCallback(() => {
     if (phaseRef.current === 'listening') {
       stopListen.current();
@@ -299,12 +335,14 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
         toggleMic();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // zachytávací fáze: klávesa dorazí k Jarvisovi dřív, než ji cokoli jiného na stránce pohltí
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [close, toggleMic]);
 
   const stop = () => {
     halt();
+    music.fadeOut(500);
     setToolLabel(null);
     setPhase('idle');
   };
@@ -394,6 +432,76 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch }
           >
             ▶ Vyzkoušet hlas
           </button>
+          <div className="jarvis-intro">
+            <strong>🎸 Úvodní hudba</strong>
+            {introInfo ? (
+              <div className="jarvis-intro-file">
+                <span title={introInfo.name}>{introInfo.name}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    halt();
+                    if (music.playing) music.fadeOut(600);
+                    else void music.start(intro.volume);
+                  }}
+                >
+                  ▶/⏹
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    music.reset();
+                    void deleteIntro().then(() => {
+                      introInfoRef.current = null;
+                      setIntroInfo(null);
+                    });
+                  }}
+                >
+                  🗑
+                </button>
+              </div>
+            ) : (
+              <small>Nahraj vlastní hudbu (MP3, M4A…, do 25 MB) – zahraje na začátku hlášení. Soubor zůstane jen na tvém počítači.</small>
+            )}
+            <label className="jarvis-upload">
+              {introBusy ?? (introInfo ? 'Nahrát jinou' : 'Nahrát hudbu')}
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  setIntroBusy('Nahrávám…');
+                  music.reset();
+                  uploadIntro(f)
+                    .then((info) => {
+                      introInfoRef.current = info;
+                      setIntroInfo(info);
+                      setError(null);
+                    })
+                    .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Nahrání se nepovedlo.'))
+                    .finally(() => setIntroBusy(null));
+                }}
+              />
+            </label>
+            {introInfo && (
+              <>
+                <label className="jarvis-check">
+                  <input type="checkbox" checked={intro.on} onChange={(e) => setIntro((s) => ({ ...s, on: e.target.checked }))} />
+                  Pouštět na začátku hlášení
+                </label>
+                <label>
+                  Naplno {intro.seconds} s, pak ztlumit pod hlas
+                  <input type="range" min={3} max={30} step={1} value={intro.seconds} onChange={(e) => setIntro((s) => ({ ...s, seconds: Number(e.target.value) }))} />
+                </label>
+                <label>
+                  Hlasitost {Math.round(intro.volume * 100)} %
+                  <input type="range" min={0.1} max={1} step={0.05} value={intro.volume} onChange={(e) => setIntro((s) => ({ ...s, volume: Number(e.target.value) }))} />
+                </label>
+              </>
+            )}
+          </div>
           {(noCzechVoice || !ttsSupported()) && (
             <p>
               Prohlížeč nemá český hlas. Nejlepší jsou v <strong>Microsoft Edge</strong> (Antonín, Vlasta). Ve Windows lze přidat i hlas: Nastavení → Čas a jazyk → Řeč → Přidat hlasy →

@@ -1,6 +1,6 @@
 import './env.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { networkInterfaces } from 'node:os';
@@ -12,6 +12,7 @@ import { authUrl, disconnect as googleDisconnect, finishAuth, googleStatus, save
 import { agenda } from './calendar.ts';
 import { deletePoster, getPoster, listPosters } from './lexa.ts';
 import { getSpend } from './usage.ts';
+import { DATA_DIR, readJson, writeJson } from './store.ts';
 import { addTile, deleteTile, listTiles, openOnPc, resetTiles, safeUrl } from './klik.ts';
 import { createBriefing, voiceContext } from './jarvis.ts';
 import { activeTasks, addMemory, deleteMemory, listMemory, teamLog, type MemoryKind } from './team.ts';
@@ -61,6 +62,15 @@ async function readBody(req: IncomingMessage, limit = 64 * 1024): Promise<unknow
     chunks.push(chunk as Buffer);
   }
   return chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
+}
+
+const INTRO_FILE = 'jarvis-uvod.bin';
+const INTRO_META = 'jarvis-uvod.json';
+const INTRO_MAX = 25 * 1024 * 1024;
+interface IntroMeta {
+  name: string;
+  size: number;
+  type: string;
 }
 
 /** Požadavek přišel z tohoto počítače (ne z telefonu v síti). */
@@ -186,6 +196,46 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL) {
       return json(res, 200, { ok: true });
     } catch (err) {
       return json(res, 400, { error: errorMessage(err) });
+    }
+  }
+
+  // --- Jarvis: vlastní úvodní hudba (soubor uživatele, zůstává jen na tomto počítači) ---
+  if (url.pathname === '/api/jarvis/intro/info') return json(res, 200, { intro: await readJson<IntroMeta | null>(INTRO_META, null) });
+  if (url.pathname === '/api/jarvis/intro') {
+    const file = path.join(DATA_DIR, INTRO_FILE);
+    if (req.method === 'PUT') {
+      const type = String(req.headers['content-type'] ?? '');
+      if (!type.startsWith('audio/')) return json(res, 400, { error: 'Nahraj prosím zvukový soubor (MP3, M4A, OGG…).' });
+      try {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        for await (const chunk of req) {
+          size += (chunk as Buffer).length;
+          if (size > INTRO_MAX) throw new Error('Soubor je moc velký (nejvýš 25 MB).');
+          chunks.push(chunk as Buffer);
+        }
+        if (!size) throw new Error('Prázdný soubor.');
+        await mkdir(DATA_DIR, { recursive: true });
+        await writeFile(file, Buffer.concat(chunks));
+        const meta: IntroMeta = { name: (url.searchParams.get('name') ?? 'hudba').slice(0, 120), size, type };
+        await writeJson(INTRO_META, meta);
+        return json(res, 200, { intro: meta });
+      } catch (err) {
+        return json(res, 400, { error: errorMessage(err) });
+      }
+    }
+    if (req.method === 'DELETE') {
+      await rm(file, { force: true });
+      await rm(path.join(DATA_DIR, INTRO_META), { force: true });
+      return json(res, 200, { ok: true });
+    }
+    const meta = await readJson<IntroMeta | null>(INTRO_META, null);
+    try {
+      const data = await readFile(file);
+      res.writeHead(200, { 'Content-Type': meta?.type ?? 'audio/mpeg', 'Content-Length': data.length, 'Cache-Control': 'no-store' });
+      return res.end(data);
+    } catch {
+      return json(res, 404, { error: 'Úvodní hudba není nahraná.' });
     }
   }
 

@@ -57,7 +57,8 @@ export function JarvisOrb({ state, level }: { state: OrbState; level: { level: n
       const target = COLORS[st];
       col = col.map((c, i) => c + (target[i] - c) * Math.min(1, dt * 4));
       const rgb = (a: number) => `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},${a})`;
-      const lv = st === 'speaking' || st === 'listening' ? level.level : 0;
+      // při přípravě hlášení koule pulzuje do rytmu úvodní hudby
+      const lv = st === 'idle' || st === 'error' ? 0 : level.level;
       smooth += (lv - smooth) * Math.min(1, dt * 12);
 
       const cx = w / 2;
@@ -89,7 +90,8 @@ export function JarvisOrb({ state, level }: { state: OrbState; level: { level: n
       for (let i = 0; i < BARS; i++) {
         const a = (i / BARS) * Math.PI * 2;
         const noise = 0.5 + 0.5 * Math.sin(a * 5 + t * 6) * Math.sin(a * 3 - t * 4.3) + 0.25 * Math.sin(a * 11 + t * 9);
-        const want = st === 'thinking' ? 0.12 + 0.1 * Math.sin(a * 2 + t * 5) : 0.05 + smooth * (0.35 + 0.65 * Math.abs(noise));
+        const voice = 0.05 + smooth * (0.35 + 0.65 * Math.abs(noise));
+        const want = st === 'thinking' ? Math.max(0.12 + 0.1 * Math.sin(a * 2 + t * 5), voice) : voice;
         bars[i] += (want - bars[i]) * Math.min(1, dt * 14);
       }
       ctx.lineCap = 'round';

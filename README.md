@@ -100,6 +100,9 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Rozpoznávání řeči posílá zvuk z mikrofonu Microsoftu (Edge) nebo Googlu (Chrome).
   Na telefonu mikrofon funguje jen přes zabezpečenou adresu (https, např. Tailscale) –
   přes běžnou adresu v síti se dá Jarvisovi psát a mluví nahlas.
+- **Úvodní hudba:** v nastavení Jarvise (⚙) nahraješ vlastní hudbu (MP3, M4A…, do 25 MB).
+  Hraje hned po kliknutí, zatímco se hlášení připravuje (koule pulzuje do rytmu), po nastavené
+  době se ztlumí pod hlas a po úvodu dozní. Soubor zůstává jen na tvém počítači (`data/jarvis-uvod.bin`).
 - Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
   změnit v `.env`: `JARVIS_OSLOVENI=pane`.
 
