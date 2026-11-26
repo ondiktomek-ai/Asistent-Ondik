@@ -350,7 +350,15 @@ export interface Briefing {
   id: string;
   createdAt: string;
   segments: BriefingSegment[];
-  weather: { temp: number; text: string; icon: string; min?: number; max?: number } | null;
+  weather: {
+    temp: number;
+    text: string;
+    icon: string;
+    min?: number;
+    max?: number;
+    hourly?: { time: string; temp: number; precipProb: number }[];
+    tomorrow?: { text: string; icon: string; min: number; max: number };
+  } | null;
   events: { start: string; summary: string; allDay: boolean; location?: string }[];
   calendarConnected: boolean;
 }

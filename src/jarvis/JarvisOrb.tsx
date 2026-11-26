@@ -67,7 +67,8 @@ export function JarvisOrb({ state, level }: { state: OrbState; level: { level: n
       ctx.clearRect(0, 0, w, h);
 
       // záře v pozadí
-      const glow = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 2.1);
+      // záře nesmí přesáhnout okraj plátna (jinak je vidět čtverec)
+      const glow = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, Math.min(R * 2.1, Math.min(w, h) / 2));
       glow.addColorStop(0, rgb(0.28 + smooth * 0.25));
       glow.addColorStop(0.45, rgb(0.08));
       glow.addColorStop(1, rgb(0));

@@ -3875,3 +3875,989 @@ button {
   font-style: italic;
   opacity: 0.7;
 }
+
+/* =====================================================================
+   JARVIS 2 – vysílání ve stylu zpráv, elegantnější vzhled
+   ===================================================================== */
+.jarvis {
+  --j: 94, 231, 255;
+  --gold: 255, 196, 107;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* místo „skenovacích“ čar jemná pohyblivá záře */
+.jarvis-scan {
+  display: none;
+}
+
+.jv-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.jv-aurora i {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.22;
+  animation: jv-drift 26s ease-in-out infinite alternate;
+}
+
+.jv-aurora i:nth-child(1) {
+  left: -15vmax;
+  top: -20vmax;
+  background: radial-gradient(circle, rgb(var(--j)), transparent 65%);
+}
+
+.jv-aurora i:nth-child(2) {
+  right: -20vmax;
+  top: 10vmax;
+  background: radial-gradient(circle, rgb(88, 110, 255), transparent 65%);
+  animation-duration: 32s;
+  animation-delay: -8s;
+}
+
+.jv-aurora i:nth-child(3) {
+  left: 25vmax;
+  bottom: -30vmax;
+  background: radial-gradient(circle, rgb(var(--gold)), transparent 65%);
+  opacity: 0.1;
+  animation-duration: 38s;
+}
+
+@keyframes jv-drift {
+  to {
+    transform: translate(8vmax, 6vmax) scale(1.15);
+  }
+}
+
+.jarvis-brand {
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  text-shadow: 0 0 18px rgba(var(--j), 0.45);
+}
+
+/* --- části hlášení jako časová osa s průběhem --- */
+.jarvis-steps {
+  gap: 4px;
+}
+
+.jarvis-steps button {
+  flex: 0 1 112px;
+  min-width: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 4px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.jarvis-steps button.active {
+  background: rgba(var(--j), 0.08);
+  box-shadow: none;
+}
+
+.jarvis-step-label {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jarvis-step-bar {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(var(--j), 0.14);
+  overflow: hidden;
+}
+
+.jarvis-step-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(var(--j), 0.7), rgb(var(--j)));
+  box-shadow: 0 0 8px rgba(var(--j), 0.8);
+  transition: width 0.25s linear;
+}
+
+/* --- vysílání --- */
+.jv-broadcast {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(180px, 250px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'presenter screen'
+    'lower lower'
+    'crawl crawl';
+  gap: 14px 22px;
+  padding: 4px 26px 0;
+  min-height: 0;
+  animation: jv-fade-in 0.6s ease-out both;
+}
+
+@keyframes jv-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.jv-presenter {
+  grid-area: presenter;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+}
+
+.jv-presenter-orb {
+  width: min(230px, 100%, 34vh);
+  height: min(230px, 100%, 34vh);
+}
+
+.jv-presenter-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.jv-presenter-name strong {
+  font-weight: 300;
+  font-size: 20px;
+  letter-spacing: 0.55em;
+  margin-right: -0.55em;
+  color: #fff;
+}
+
+.jv-presenter-name span {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(223, 246, 255, 0.5);
+}
+
+.jv-live {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(232, 60, 70, 0.16);
+  border: 1px solid rgba(232, 60, 70, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #ffd5d8;
+}
+
+.jv-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff4b57;
+  box-shadow: 0 0 8px #ff4b57;
+  animation: jarvis-breathe 1.2s ease-in-out infinite;
+}
+
+.jv-screen {
+  grid-area: screen;
+  position: relative;
+  min-height: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--j), 0.18);
+  background:
+    linear-gradient(160deg, rgba(20, 52, 84, 0.55), rgba(4, 14, 28, 0.7)),
+    repeating-linear-gradient(90deg, rgba(var(--j), 0.025) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(0deg, rgba(var(--j), 0.025) 0 1px, transparent 1px 48px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.jv-screen::before {
+  /* lesk přes obrazovku */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.05) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: jv-sheen 7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes jv-sheen {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* velký nápis sekce mezi částmi */
+.jv-titlecard {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: linear-gradient(90deg, rgba(3, 10, 22, 0.2), rgba(3, 10, 22, 0.85) 30%, rgba(3, 10, 22, 0.85) 70%, rgba(3, 10, 22, 0.2));
+  animation: jv-title-bg 0.95s ease-in-out both;
+}
+
+.jv-titlecard-icon {
+  font-size: clamp(40px, 6vw, 72px);
+  animation: jv-title-in 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.jv-titlecard-label {
+  font-size: clamp(48px, 8vw, 110px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff, rgb(var(--j)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: jv-title-in 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) 0.05s both;
+}
+
+.jv-titlecard-streak {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgb(var(--j)), transparent);
+  box-shadow: 0 0 20px rgb(var(--j));
+  animation: jv-streak 0.95s ease-in-out both;
+}
+
+@keyframes jv-title-bg {
+  0% {
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes jv-title-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-60px) skewX(-12deg);
+    filter: blur(8px);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(60px) scale(1.04);
+    filter: blur(6px);
+  }
+}
+
+@keyframes jv-streak {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  40% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* spodní titulková lišta */
+.jv-lower-third {
+  grid-area: lower;
+  display: flex;
+  align-items: stretch;
+  min-height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(3, 12, 26, 0.86);
+  border: 1px solid rgba(var(--j), 0.22);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  animation: jv-lower-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes jv-lower-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+.jv-lower-tag {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, rgb(var(--j)), rgb(70, 140, 255));
+  color: #03101e;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.jv-lower-third p {
+  margin: 0;
+  padding: 12px 20px;
+  align-self: center;
+  font-size: clamp(16px, 1.55vw, 22px);
+  line-height: 1.4;
+  font-weight: 500;
+  animation: jv-sub 0.4s ease-out both;
+}
+
+@keyframes jv-sub {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+.jv-lower-third .said {
+  color: #fff;
+}
+
+.jv-lower-third .unsaid {
+  color: rgba(223, 246, 255, 0.4);
+}
+
+/* běžící pás */
+.jv-crawl {
+  grid-area: crawl;
+  overflow: hidden;
+  border-top: 1px solid rgba(var(--j), 0.18);
+  border-bottom: 1px solid rgba(var(--j), 0.18);
+  background: rgba(var(--j), 0.05);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.jv-crawl-run {
+  display: inline-flex;
+  gap: 42px;
+  padding: 8px 0;
+  white-space: nowrap;
+  animation: jv-crawl linear infinite;
+}
+
+.jv-crawl-run span {
+  font-size: 13px;
+  color: rgba(223, 246, 255, 0.82);
+}
+
+.jv-crawl-run b {
+  margin-right: 6px;
+  color: rgb(var(--j));
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+@keyframes jv-crawl {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- obsah obrazovky (jednotlivé části) --- */
+.bs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(18px, 3vw, 40px) clamp(20px, 3.5vw, 52px);
+  overflow: hidden;
+}
+
+.bs-kicker {
+  margin-bottom: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgb(var(--j));
+  animation: jv-kicker 0.6s ease-out both;
+}
+
+.bs-kicker span {
+  color: rgba(223, 246, 255, 0.5);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  text-transform: none;
+}
+
+@keyframes jv-kicker {
+  from {
+    opacity: 0;
+    letter-spacing: 0.6em;
+  }
+}
+
+/* úvod */
+.bs-intro {
+  align-items: flex-start;
+}
+
+.bs-clock {
+  font-size: clamp(72px, 11vw, 150px);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(var(--j), 0.35);
+  animation: jv-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bs-date {
+  margin-top: 8px;
+  font-size: clamp(18px, 2vw, 26px);
+  font-weight: 300;
+  color: rgba(223, 246, 255, 0.75);
+  animation: jv-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.bs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.bs-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--j), 0.28);
+  background: rgba(var(--j), 0.07);
+  font-size: 14px;
+  animation: jv-rise 0.7s ease-out both;
+}
+
+.bs-chip:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.bs-chip:nth-child(3) {
+  animation-delay: 0.55s;
+}
+
+@keyframes jv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* počasí */
+.bs-weather-top {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 2.5vw, 34px);
+  flex-wrap: wrap;
+}
+
+.bs-weather-icon {
+  font-size: clamp(56px, 7vw, 96px);
+  animation: jv-float 4s ease-in-out infinite, jv-rise 0.8s ease-out both;
+}
+
+@keyframes jv-float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.bs-temp {
+  font-size: clamp(72px, 10vw, 140px);
+  font-weight: 200;
+  line-height: 1;
+  color: #fff;
+}
+
+.bs-temp small {
+  font-size: 0.35em;
+  margin-left: 4px;
+  color: rgba(223, 246, 255, 0.6);
+}
+
+.bs-weather-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+  color: rgba(223, 246, 255, 0.75);
+  animation: jv-rise 0.8s ease-out 0.3s both;
+}
+
+.bs-weather-text strong {
+  font-size: 22px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.bs-chart {
+  width: 100%;
+  height: auto;
+  max-height: 26vh;
+  margin-top: 18px;
+  overflow: visible;
+}
+
+.bs-line {
+  fill: none;
+  stroke: rgb(var(--j));
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 6px rgba(var(--j), 0.8));
+  animation: jv-draw 1.6s ease-out 0.3s forwards;
+}
+
+@keyframes jv-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.bs-area {
+  opacity: 0;
+  animation: jv-fade 1s ease-out 1.2s forwards;
+}
+
+@keyframes jv-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+.bs-rain {
+  fill: rgba(120, 160, 255, 0.35);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: jv-grow 0.6s ease-out both;
+}
+
+@keyframes jv-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.bs-point {
+  opacity: 0;
+  animation: jv-fade 0.5s ease-out forwards;
+}
+
+.bs-point circle {
+  fill: #fff;
+  stroke: rgb(var(--j));
+  stroke-width: 2;
+}
+
+.bs-point text {
+  fill: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bs-point .bs-hour {
+  fill: rgba(223, 246, 255, 0.5);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* zprávy */
+.bs-headlines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 18px);
+  perspective: 900px;
+}
+
+.bs-headlines li {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: clamp(12px, 1.8vh, 20px) 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--j), 0.14);
+  background: rgba(4, 16, 32, 0.55);
+  opacity: 0.55;
+  transform-origin: left center;
+  animation: jv-card-fly 0.75s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  transition: opacity 0.4s, border-color 0.4s, background 0.4s, transform 0.4s;
+}
+
+@keyframes jv-card-fly {
+  from {
+    opacity: 0;
+    transform: translateX(80px) rotateY(-18deg);
+  }
+}
+
+.bs-headlines li.active {
+  opacity: 1;
+  border-color: rgba(var(--j), 0.6);
+  background: linear-gradient(90deg, rgba(var(--j), 0.16), rgba(4, 16, 32, 0.6));
+  box-shadow: 0 0 30px rgba(var(--j), 0.15);
+  transform: scale(1.015);
+}
+
+.bs-headlines li.done {
+  opacity: 0.4;
+}
+
+.bs-num {
+  flex-shrink: 0;
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 200;
+  line-height: 1;
+  color: rgb(var(--j));
+}
+
+.bs-headlines a {
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  font-size: clamp(17px, 1.9vw, 26px);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bs-source {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(var(--j), 0.12);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: rgba(223, 246, 255, 0.75);
+}
+
+.bs-region .bs-num,
+.bs-region .bs-kicker {
+  color: rgb(var(--gold));
+}
+
+/* program */
+.bs-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bs-timeline li {
+  display: grid;
+  grid-template-columns: 110px 28px 1fr;
+  align-items: center;
+  min-height: 56px;
+  animation: jv-rise 0.6s ease-out both;
+}
+
+.bs-time {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(20px, 2.2vw, 30px);
+  font-weight: 300;
+  color: #fff;
+}
+
+.bs-time small {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(223, 246, 255, 0.5);
+}
+
+.bs-dot {
+  position: relative;
+  justify-self: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgb(var(--j));
+  box-shadow: 0 0 12px rgb(var(--j));
+}
+
+.bs-dot::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 12px;
+  width: 2px;
+  height: 46px;
+  background: rgba(var(--j), 0.25);
+}
+
+.bs-timeline li:last-child .bs-dot::before {
+  display: none;
+}
+
+.bs-event {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(17px, 1.8vw, 24px);
+  font-weight: 500;
+}
+
+.bs-event small {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(223, 246, 255, 0.55);
+}
+
+/* text a závěrečná otázka */
+.bs-text {
+  align-items: center;
+  text-align: center;
+}
+
+.bs-text p {
+  margin: 0;
+  font-size: 18px;
+  color: rgba(223, 246, 255, 0.75);
+  animation: jv-rise 0.7s ease-out both;
+}
+
+.bs-big,
+.bs-question,
+.bs-big-text {
+  font-size: clamp(30px, 4.4vw, 58px) !important;
+  font-weight: 300;
+  line-height: 1.2;
+  color: #fff !important;
+  max-width: 900px;
+}
+
+.bs-mic-hint {
+  margin-top: 22px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 255, 196, 0.4);
+  color: #c9ffe8;
+  font-size: 14px;
+  animation: jv-rise 0.7s ease-out 0.4s both;
+}
+
+/* při vysílání koule ve středu neukazujeme (je u moderátora) */
+.jarvis-onair .jarvis-status {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .jv-broadcast {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'presenter'
+      'screen'
+      'lower'
+      'crawl';
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .jv-presenter {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  .jv-presenter-orb {
+    width: 64px;
+    height: 64px;
+  }
+  .jv-presenter-name {
+    align-items: flex-start;
+  }
+  .jv-presenter-name strong {
+    font-size: 15px;
+  }
+  .jv-live {
+    margin: 0 0 0 auto;
+  }
+  .jv-screen {
+    min-height: 300px;
+  }
+  .jv-lower-third {
+    flex-direction: column;
+  }
+  .jv-lower-tag {
+    padding: 6px 12px;
+  }
+  .jv-lower-third p {
+    font-size: 15px;
+    padding: 10px 14px;
+  }
+  .bs-timeline li {
+    grid-template-columns: 80px 24px 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jv-aurora i,
+  .jv-screen::before,
+  .jv-crawl-run {
+    animation: none;
+  }
+}
+
+.bs-date::first-letter {
+  text-transform: uppercase;
+}
+
+.bs-point text {
+  font-size: 16px;
+}
+
+.bs-point .bs-hour {
+  font-size: 13px;
+}
+
+/* při vysílání se městečko v pozadí víc ztlumí, ať nic neprosvítá */
+.jarvis-onair {
+  background:
+    linear-gradient(180deg, rgba(2, 6, 14, 0.9), rgba(2, 6, 14, 0.4) 120px),
+    radial-gradient(ellipse at 50% 42%, rgba(10, 40, 66, 0.82), rgba(2, 7, 16, 0.97) 72%),
+    rgba(2, 6, 14, 0.82);
+}
+
+.jarvis-onair .jv-screen {
+  background:
+    repeating-linear-gradient(90deg, rgba(var(--j), 0.035) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(0deg, rgba(var(--j), 0.035) 0 1px, transparent 1px 48px),
+    linear-gradient(160deg, rgba(16, 44, 74, 0.92), rgba(4, 12, 26, 0.95));
+}
+
+/* vysílání na telefonu: posouvatelný sloupec, obsah určuje výšku */
+@media (max-width: 760px) {
+  .jv-broadcast {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    gap: 10px;
+    padding: 0 12px 8px;
+  }
+  .jv-screen {
+    flex: none;
+    min-height: 0;
+  }
+  .jv-screen .bs {
+    position: relative;
+    inset: auto;
+    min-height: 44vh;
+    padding: 18px 16px;
+  }
+  .jv-lower-third,
+  .jv-crawl {
+    flex: none;
+  }
+  .bs-clock {
+    font-size: 64px;
+  }
+  .bs-temp {
+    font-size: 64px;
+  }
+  .bs-weather-icon {
+    font-size: 44px;
+  }
+  .bs-weather-text strong {
+    font-size: 18px;
+  }
+  .bs-headlines a {
+    font-size: 16px;
+  }
+  .bs-num {
+    font-size: 22px;
+  }
+  .bs-headlines li {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .jv-titlecard-label {
+    font-size: 40px;
+  }
+  .jv-titlecard-icon {
+    font-size: 34px;
+  }
+  .bs-big,
+  .bs-question,
+  .bs-big-text {
+    font-size: 26px !important;
+  }
+}
+
+/* telefon: bez těžkých rozmazaných vrstev (šetří výkon a baterii) */
+@media (max-width: 760px) {
+  .jv-aurora,
+  .jv-screen::before {
+    display: none;
+  }
+  .jarvis,
+  .jarvis-onair {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: radial-gradient(ellipse at 50% 30%, rgba(12, 42, 70, 0.98), rgba(2, 7, 16, 1) 75%);
+  }
+}
+
+.jv-broadcast {
+  overflow-anchor: none;
+}
+
+@media (max-width: 760px) {
+  .bs-headlines li.active {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .jv-presenter {
+    flex: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .jv-screen .bs {
+    min-height: 34vh;
+  }
+}

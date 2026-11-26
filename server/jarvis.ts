@@ -34,7 +34,16 @@ export interface Briefing {
   id: string;
   createdAt: string;
   segments: BriefingSegment[];
-  weather: { temp: number; text: string; icon: string; min?: number; max?: number } | null;
+  weather: {
+    temp: number;
+    text: string;
+    icon: string;
+    min?: number;
+    max?: number;
+    /** příštích 12 hodin (pro graf) */
+    hourly?: { time: string; temp: number; precipProb: number }[];
+    tomorrow?: { text: string; icon: string; min: number; max: number };
+  } | null;
   events: { start: string; summary: string; allDay: boolean; location?: string }[];
   calendarConnected: boolean;
 }
@@ -192,7 +201,17 @@ Napiš hlášení.`;
           .slice(0, 3)
           .map((n) => ({ title: n.title, source: n.source, link: n.link })),
       })),
-    weather: weather ? { temp: weather.current.temp, text: weather.current.text, icon: weather.current.icon, min: weather.daily[0]?.min, max: weather.daily[0]?.max } : null,
+    weather: weather
+      ? {
+          temp: weather.current.temp,
+          text: weather.current.text,
+          icon: weather.current.icon,
+          min: weather.daily[0]?.min,
+          max: weather.daily[0]?.max,
+          hourly: weather.hourly.slice(0, 12).map((h) => ({ time: h.time.slice(11, 16), temp: h.temp, precipProb: h.precipProb })),
+          tomorrow: weather.daily[1] ? { text: weather.daily[1].text, icon: weather.daily[1].icon, min: weather.daily[1].min, max: weather.daily[1].max } : undefined,
+        }
+      : null,
     events: upcoming.map((e) => ({ start: e.start, summary: e.summary, allDay: e.allDay, location: e.location })),
     calendarConnected,
   };

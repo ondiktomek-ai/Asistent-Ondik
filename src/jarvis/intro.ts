@@ -105,6 +105,7 @@ export class IntroMusic {
     if (!(await this.load()) || !this.url) return false;
     this.stop();
     const a = new Audio(this.url);
+    a.loop = true; // hraje po celou dobu hlášení
     a.volume = volume;
     this.volume = volume;
     this.audio = a;
@@ -155,8 +156,13 @@ export class IntroMusic {
   }
 
   /** Ztlumí do pozadí (pod Jarvisův hlas). */
-  duck() {
-    this.ramp(this.volume * 0.18, 1200);
+  duck(ms = 700) {
+    this.ramp(this.volume * 0.2, ms);
+  }
+
+  /** Krátké zesílení mezi částmi hlášení (jako znělka ve zprávách). */
+  swell(ms = 350) {
+    this.ramp(this.volume * 0.65, ms);
   }
 
   fadeOut(ms = 2500) {

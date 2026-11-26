@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBriefing, launch, onServerPc, sendMessage, type Briefing, type BriefingSegment, type ChatAttachment, type SegmentKind } from '../api';
 import { JarvisOrb, type OrbState } from './JarvisOrb';
+import { BriefingStage } from './BriefingStage';
 import { canAutoplay, loadAutopilot, saveAutopilot, type AutopilotSettings } from './autopilot';
 import { IntroMusic, deleteIntro, fetchIntroInfo, loadIntroSettings, saveIntroSettings, uploadIntro, type IntroInfo, type IntroSettings } from './intro';
 import { MIC_DENIED, Speaker, chime, czechVoices, listen, loadSettings, loadVoices, micPermission, micUnavailableReason, pickVoice, saveSettings, speakable, ttsSupported, type VoiceSettings } from './speech';
@@ -18,6 +19,17 @@ const KIND_LABEL: Record<SegmentKind, string> = {
   otazka: 'Otázka',
 };
 const KIND_ICON: Record<SegmentKind, string> = { uvod: '🕰️', pocasi: '🌤️', svet: '🌍', cesko: '🇨🇿', region: '📍', program: '📅', tym: '🔧', otazka: '💬' };
+
+/** Hlasový pokyn k vypnutí Jarvise (krátká věta jako „vypni se“, „to je vše“, „dobrou noc“). */
+function isStopCommand(text: string): boolean {
+  const t = text
+    .toLowerCase()
+    .replace(/[.,!?;:„“"]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (t.split(' ').length > 6) return false;
+  return /(^|\s)(vypni se|vypni|vypnout|vypnete se|ukonči|ukonči se|ukončit|zavři se|zavři|zavřít|konec|to je vše|to je všechno|to je zatím vše|nashledanou|na shledanou|dobrou noc|sbohem|jdi spát|můžeš jít)(\s|$)/.test(t);
+}
 
 const PREP_LINES = ['Probouzím systémy…', 'Kontroluji počasí v Lipníku…', 'Čtu zprávy ze světa…', 'Procházím české zprávy…', 'Dívám se do okolí Lipníku…', 'Nahlížím do kalendáře…', 'Skládám hlášení…'];
 
@@ -81,6 +93,11 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
     void micPermission().then((st) => st === 'denied' && setMicDenied(true));
   }, [setMicDenied]);
   const resumeAt = useRef<{ b: Briefing; i: number } | null>(null);
+  /** běží hlášení („vysílání“) – obrazovka je ve stylu zpráv */
+  const [onAir, setOnAir] = useState(false);
+  /** velký nápis sekce mezi částmi */
+  const [titleCard, setTitleCard] = useState<{ key: number; label: string; icon: string } | null>(null);
+  const closeRef = useRef<() => void>(() => {});
   const [now, setNow] = useState(() => new Date());
   const micReason = useMemo(micUnavailableReason, []);
 
@@ -111,6 +128,8 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
     abort.current?.abort();
     abort.current = null;
     mic.level = 0;
+    setOnAir(false);
+    setTitleCard(null);
   }, [speaker, mic]);
 
   useEffect(() => halt, [halt]);
@@ -161,6 +180,14 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
       halt();
       music.fadeOut(400);
       const id = run.current;
+      if (isStopCommand(question)) {
+        // „vypni se“ → rozloučí se a vrátí na domovskou obrazovku
+        setSubtitle({ text: 'Jak si přejete. Jsem tu, kdybyste mě potřeboval.', progress: 0, who: 'jarvis' });
+        setPhase('speaking');
+        await speaker.say('Jak si přejete. Jsem tu, kdybyste mě potřeboval.', (f) => id === run.current && setSubtitle({ text: 'Jak si přejete. Jsem tu, kdybyste mě potřeboval.', progress: f, who: 'jarvis' }));
+        if (id === run.current) closeRef.current();
+        return;
+      }
       const ctrl = new AbortController();
       abort.current = ctrl;
       setError(null);
@@ -242,29 +269,47 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
       halt();
       const id = run.current;
       setError(null);
+      setOnAir(true);
+      // hudba hraje po celou dobu hlášení (při „Znovu“ se pustí znovu)
+      if (!music.playing && introRef.current.on && introInfoRef.current) {
+        await music.start(introRef.current.volume);
+        if (id !== run.current) return;
+      }
       for (let i = from; i < b.segments.length; i++) {
         if (id !== run.current) return;
         const seg = b.segments[i];
+        // přechod mezi částmi: velký nápis sekce, hudba se na chvilku zesílí
+        if (seg.kind !== 'uvod' && seg.kind !== 'otazka') {
+          setTitleCard({ key: Date.now(), label: KIND_LABEL[seg.kind], icon: KIND_ICON[seg.kind] });
+          if (music.playing) music.swell();
+          await new Promise((r) => setTimeout(r, 950));
+          if (id !== run.current) return;
+          setTitleCard(null);
+        }
         setSegIndex(i);
         setSubtitle({ text: seg.text, progress: 0, who: 'jarvis' });
         setPhase('speaking');
+        if (music.playing) music.duck();
         await speaker.say(seg.say, (f) => id === run.current && setSubtitle({ text: seg.text, progress: f, who: 'jarvis' }));
         if (id !== run.current) return;
         if (speaker.blocked) {
           // prohlížeč nedovolil mluvit bez kliknutí – počkáme na klepnutí a pokračujeme od této části
           resumeAt.current = { b, i };
           music.stop();
+          setOnAir(false);
           setPhase('tap');
           return;
         }
-        if (i === from) music.fadeOut(3500); // úvodní hudba po první větě dozní
-        await new Promise((r) => setTimeout(r, 280));
+        await new Promise((r) => setTimeout(r, 250));
       }
       if (id !== run.current) return;
+      // konec hlášení: hudba dozní, Jarvis poslouchá odpověď
+      music.fadeOut(2500);
+      setOnAir(false);
       if (!micReason && !micDeniedRef.current) startListening();
       else setPhase('idle');
     },
-    [halt, speaker, setPhase, micReason, startListening],
+    [halt, speaker, setPhase, micReason, startListening, music],
   );
 
   const fetchBriefing = useCallback(async () => {
@@ -288,9 +333,6 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
         // hudba hraje naplno nastavenou dobu, pak se ztlumí pod hlas
         const wait = introRef.current.seconds - music.elapsed();
         if (wait > 0) await new Promise((r) => setTimeout(r, wait * 1000));
-        if (id !== run.current) return;
-        music.duck();
-        await new Promise((r) => setTimeout(r, 700));
         if (id !== run.current) return;
       }
       void play(b);
@@ -379,6 +421,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
     chime('end');
     onClose();
   }, [halt, onClose, music]);
+  closeRef.current = close;
   const toggleMic = useCallback(() => {
     if (phaseRef.current === 'listening') {
       stopListen.current();
@@ -416,6 +459,15 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
   const newsCards = revealed.map((s, i) => ({ s, i })).filter(({ s }) => (s.kind === 'svet' || s.kind === 'cesko' || s.kind === 'region' || s.kind === 'tym') && s.items.length > 0);
   const showWeather = !!briefing?.weather && segIndex >= 0;
   const showProgram = revealed.some((s) => s.kind === 'program');
+  const crawl = useMemo(() => {
+    if (!briefing) return [] as { tag: string; text: string }[];
+    const out: { tag: string; text: string }[] = [];
+    const w = briefing.weather;
+    if (w) out.push({ tag: 'POČASÍ', text: `Lipník ${Math.round(w.temp)} °C, ${w.text.toLowerCase()}` });
+    for (const sg of briefing.segments) for (const n of sg.items) out.push({ tag: KIND_LABEL[sg.kind].toUpperCase(), text: n.title });
+    for (const e of briefing.events.slice(0, 3)) out.push({ tag: 'PROGRAM', text: `${e.allDay ? 'celý den' : e.start.slice(11, 16)} ${e.summary}` });
+    return out.length ? out : [{ tag: 'JARVIS', text: 'Městečko Ondik' }];
+  }, [briefing]);
   const czech = czechVoices(voices);
   const noCzechVoice = ttsSupported() && voices.length > 0 && !czech.length;
   const statusText =
@@ -436,7 +488,12 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
               : null;
 
   return (
-    <div className={`jarvis jarvis-${phase}`} role="dialog" aria-modal="true" aria-label="Jarvis">
+    <div className={`jarvis jarvis-${phase}${onAir ? ' jarvis-onair' : ''}`} role="dialog" aria-modal="true" aria-label="Jarvis">
+      <div className="jv-aurora" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </div>
       <div className="jarvis-scan" aria-hidden />
       <header className="jarvis-top">
         <div className="jarvis-brand">
@@ -453,8 +510,12 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
                 onClick={() => briefing && void play(briefing, i)}
                 title={`Přehrát od: ${KIND_LABEL[s.kind]}`}
               >
-                <span>{KIND_ICON[s.kind]}</span>
-                {KIND_LABEL[s.kind]}
+                <span className="jarvis-step-label">
+                  {KIND_ICON[s.kind]} {KIND_LABEL[s.kind]}
+                </span>
+                <span className="jarvis-step-bar">
+                  <span style={{ width: `${i < segIndex ? 100 : i === segIndex ? Math.round((subtitle?.who === 'jarvis' ? subtitle.progress : 0) * 100) : 0}%` }} />
+                </span>
               </button>
             ))}
           </nav>
@@ -595,6 +656,47 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
         </div>
       )}
 
+      {onAir && briefing && current ? (
+        <div className="jv-broadcast">
+          <div className="jv-presenter">
+            <div className="jv-presenter-orb">
+              <JarvisOrb state={orbState} level={level} />
+            </div>
+            <div className="jv-presenter-name">
+              <strong>JARVIS</strong>
+              <span>osobní asistent</span>
+            </div>
+            <div className="jv-live">
+              <i /> ŽIVĚ · {now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+          <div className="jv-screen">
+            <BriefingStage key={segIndex} seg={current} briefing={briefing} progress={subtitle?.who === 'jarvis' ? subtitle.progress : 0} now={now} />
+            {titleCard && (
+              <div className="jv-titlecard" key={titleCard.key}>
+                <span className="jv-titlecard-icon">{titleCard.icon}</span>
+                <span className="jv-titlecard-label">{titleCard.label}</span>
+                <span className="jv-titlecard-streak" />
+              </div>
+            )}
+          </div>
+          <div className="jv-lower-third" aria-live="polite">
+            <span className="jv-lower-tag">
+              {KIND_ICON[current.kind]} {KIND_LABEL[current.kind]}
+            </span>
+            <p key={segIndex}>{subtitle && subtitle.who === 'jarvis' ? <Highlighted text={subtitle.text} progress={subtitle.progress} /> : current.text}</p>
+          </div>
+          <div className="jv-crawl" aria-hidden>
+            <div className="jv-crawl-run" style={{ animationDuration: `${Math.max(40, crawl.length * 7)}s` }}>
+              {[...crawl, ...crawl].map((c, k) => (
+                <span key={k}>
+                  <b>{c.tag}</b> {c.text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="jarvis-main">
         <aside className="jarvis-cards" aria-label="Přehled">
           {showWeather && briefing?.weather && (
@@ -746,6 +848,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
           ))}
         </aside>
       </div>
+      )}
 
       <footer className="jarvis-controls">
         <button className={`jarvis-mic${phase === 'listening' ? ' on' : ''}`} onClick={toggleMic} disabled={!!micReason} title={micReason ?? 'Mluvit (mezerník)'} aria-label="Mluvit">
