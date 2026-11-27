@@ -8,7 +8,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { latestNews, newsSince, pollNews, type NewsItem } from './news.ts';
 import { getWeather, weatherSentence, type Weather } from './weather.ts';
 import { readJson, writeJson } from './store.ts';
-import { apiKeyConfigured } from './config.ts';
+import { apiKeyConfigured, claude } from './config.ts';
+import { netError, serviceFailed, serviceOk } from './net.ts';
 
 export const REPORTER_MODEL = process.env.REPORTER_MODEL || 'claude-haiku-5-5';
 const POLL_MINUTES = Number(process.env.ZPRAVY_INTERVAL_MIN || 10);
@@ -114,12 +115,10 @@ function formatWeather(w: Weather | null) {
   return `${w.place}, teď ${w.current.temp}°C (pocitově ${w.current.feels}°C), ${w.current.text}, vítr ${w.current.wind} km/h.\nPříštích 24 h: ${hours}\nDny: ${days}`;
 }
 
-let client: Anthropic | null = null;
 
 async function aiDigest(items: NewsItem[], weather: Weather | null) {
-  client ??= new Anthropic();
   const now = new Date().toLocaleString('cs-CZ', { timeZone: 'Europe/Prague', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-  const res = await client.messages.create({
+  const res = await claude().messages.create({
     model: REPORTER_MODEL,
     max_tokens: 4000,
     system: SYSTEM,
@@ -182,7 +181,7 @@ export async function generateDigest(): Promise<Digest> {
     try {
       weather = await getWeather();
     } catch (err) {
-      console.warn('[echo] počasí:', err instanceof Error ? err.message : err);
+      console.warn('[echo] počasí:', netError(err));
     }
 
     let content: Awaited<ReturnType<typeof aiDigest>>;
@@ -192,10 +191,13 @@ export async function generateDigest(): Promise<Digest> {
       try {
         content = await aiDigest(items, weather);
         ai = true;
+        serviceOk('plakatky', 'Plakátky (Claude API)');
       } catch (err) {
-        note = `AI souhrn se nepovedl (${err instanceof Error ? err.message : 'chyba'}), zobrazuji titulky.`;
+        note = `AI souhrn se nepovedl (${netError(err)}), zobrazuji titulky.`;
         console.warn('[echo]', note);
         content = plainDigest(items, weather);
+        // zkusí to znovu za 1, 5 a 15 minut a souhrn doplní do tohohle plakátku
+        serviceFailed('plakatky', 'Plakátky (Claude API)', err, retryDigestAi);
       }
     } else {
       note = 'Bez API klíče – zobrazuji jen titulky.';
@@ -226,6 +228,35 @@ export async function generateDigest(): Promise<Digest> {
   }
 }
 
+/**
+ * Opakování po výpadku: když poslední plakátek vyšel jen z titulků (bez AI souhrnu) a je čerstvý,
+ * napíše k němu souhrn dodatečně a plakátek nahradí (stejné id, žádný nový plakátek navíc).
+ */
+async function retryDigestAi(): Promise<void> {
+  const list = await loadDigests();
+  const last = list[0];
+  if (!last || last.ai || Date.now() - Date.parse(last.createdAt) > 70 * 60_000) {
+    serviceOk('plakatky', 'Plakátky (Claude API)');
+    return;
+  }
+  const items = await newsSince(Date.parse(last.from) - 3600_000, 60);
+  let weather: Weather | null = last.weather ?? null;
+  try {
+    weather = await getWeather();
+  } catch {
+    // necháme počasí z plakátku
+  }
+  try {
+    const content = await aiDigest(items, weather);
+    list[0] = { ...last, ...content, ai: true, model: REPORTER_MODEL, note: null, weather };
+    await writeJson(FILE, list);
+    serviceOk('plakatky', 'Plakátky (Claude API)');
+    console.log('[echo] souhrn plakátku doplněn po výpadku');
+  } catch (err) {
+    serviceFailed('plakatky', 'Plakátky (Claude API)', err, retryDigestAi);
+  }
+}
+
 // ---------------------------------------------------------------- plánování
 
 let started = false;
@@ -245,7 +276,7 @@ export function startReporter() {
       const fresh = await pollNews();
       if (fresh.length) console.log(`[echo] ${fresh.length} nových zpráv`);
     } catch (err) {
-      console.warn('[echo] stahování zpráv:', err instanceof Error ? err.message : err);
+      console.warn('[echo] stahování zpráv:', netError(err));
     }
   };
 
@@ -257,7 +288,7 @@ export function startReporter() {
       const d = await generateDigest();
       console.log(`[echo] plakátek: ${d.headline}`);
     } catch (err) {
-      console.warn('[echo] plakátek:', err instanceof Error ? err.message : err);
+      console.warn('[echo] plakátek:', netError(err));
     }
   };
 

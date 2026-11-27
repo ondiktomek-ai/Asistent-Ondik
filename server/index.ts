@@ -1,4 +1,8 @@
 import './env.ts';
+import { installFileLog } from './net.ts';
+
+// varování a chyby jdou i do data/log.txt
+installFileLog();
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';

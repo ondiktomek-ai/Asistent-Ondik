@@ -4,6 +4,7 @@
  * tady jen zjišťujeme, jestli je nová verze, a na přání spustíme aktualizaci hned.
  */
 import { spawn } from 'node:child_process';
+import { serviceFailed, serviceOk } from './net.ts';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -26,10 +27,25 @@ let cache: { at: number; sha: string | null } | null = null;
  * Nejnovější verze na GitHubu (ukládá se na 30 minut). Hlavně přes git rozhraní (nepočítá se do
  * limitu 60 dotazů za hodinu jako API), API GitHubu je záloha.
  */
-export async function latestVersion(): Promise<string | null> {
-  if (cache && Date.now() - cache.at < 30 * 60_000) return cache.sha;
-  const sha = (await viaGit().catch(() => null)) ?? (await viaApi().catch(() => null));
-  cache = { at: Date.now(), sha };
+export async function latestVersion(force = false): Promise<string | null> {
+  if (!force && cache && Date.now() - cache.at < 30 * 60_000) return cache.sha;
+  let lastErr: unknown = null;
+  const sha =
+    (await viaGit().catch((e) => {
+      lastErr = e;
+      return null;
+    })) ??
+    (await viaApi().catch((e) => {
+      lastErr = e;
+      return null;
+    }));
+  if (sha) {
+    cache = { at: Date.now(), sha };
+    serviceOk('github', 'Kontrola verze (GitHub)');
+  } else {
+    cache = null; // příště zkusit znovu, ne čekat 30 minut
+    serviceFailed('github', 'Kontrola verze (GitHub)', lastErr ?? new Error('GitHub nevrátil verzi'), () => latestVersion(true));
+  }
   return sha;
 }
 

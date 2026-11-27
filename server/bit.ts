@@ -7,7 +7,8 @@ import { randomUUID } from 'node:crypto';
 import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
-import { apiKeyConfigured } from './config.ts';
+import { apiKeyConfigured, claude } from './config.ts';
+import { checkInternet, netError, servicesHealth } from './net.ts';
 import { latestNews } from './news.ts';
 import { digestState } from './reporter.ts';
 import { getWeather } from './weather.ts';
@@ -49,14 +50,15 @@ async function checkApi(): Promise<Check> {
   const base = { id: 'api', name: 'Claude API' };
   if (!apiKeyConfigured()) return { ...base, state: 'error', detail: 'Chybí API klíč.', hint: 'Doplň ANTHROPIC_API_KEY do souboru .env.' };
   // Ověření klíče je zdarma, ale stačí jednou za hodinu.
-  if (apiCache && Date.now() - apiCache.at < 3600_000) return apiCache.check;
+  // úspěch si pamatujeme hodinu, chybu jen 2 minuty (ať je hned vidět, že se to spravilo)
+  if (apiCache && Date.now() - apiCache.at < (apiCache.check.state === 'ok' ? 3600_000 : 120_000)) return apiCache.check;
   let check: Check;
   try {
-    await new Anthropic().models.list({ limit: 1 });
+    await claude().models.list({ limit: 1 }, { timeout: 15_000 });
     check = { ...base, state: 'ok', detail: 'Klíč funguje.' };
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) check = { ...base, state: 'error', detail: 'Klíč je neplatný.', hint: 'Vytvoř nový klíč na console.anthropic.com a vlož ho do .env.' };
-    else if (err instanceof Anthropic.APIConnectionError) check = { ...base, state: 'warn', detail: 'Nepodařilo se spojit s Claude API.', hint: 'Je počítač online?' };
+    else if (err instanceof Anthropic.APIConnectionError) check = { ...base, state: 'warn', detail: `Nepodařilo se spojit s Claude API: ${netError(err)}.`, hint: 'Podívej se na kontrolu Internet.' };
     else if (err instanceof Anthropic.APIError) check = { ...base, state: 'warn', detail: `Claude API teď odpovídá chybou (${err.status ?? '?'}).`, hint: 'Většinou to brzy přejde.' };
     else check = { ...base, state: 'warn', detail: err instanceof Error ? err.message : 'Neznámá chyba.' };
   }
@@ -71,8 +73,17 @@ async function checkNews(): Promise<Check> {
   const ok = sources.filter((s) => s.ok).length;
   if (!lastPoll) return { ...base, state: 'info', detail: 'Zprávy se ještě nestahovaly.' };
   if (Date.now() - Date.parse(lastPoll) > 40 * 60_000) return { ...base, state: 'warn', detail: `Naposledy staženo ${ago(lastPoll)}.`, hint: 'Restartuj městečko.' };
-  if (ok === 0) return { ...base, state: 'error', detail: 'Žádný zdroj zpráv nefunguje.', hint: 'Zkontroluj připojení k internetu.' };
-  if (bad.length) return { ...base, state: 'warn', detail: `Funguje ${ok} z ${sources.length} zdrojů. Nejde: ${bad.map((b) => b.name).join(', ')}.`, hint: 'Adresu zdroje lze opravit v server/news-sources.ts.' };
+  // seskupit podle příčiny: „ENOTFOUND: 9 zdrojů“ řekne víc než 9× „fetch failed“
+  const why = (list: typeof bad, all: boolean) => {
+    const groups = new Map<string, string[]>();
+    for (const b of list) {
+      const reason = (b.lastError ?? 'neznámá chyba').replace(/^fetch failed – /, '');
+      groups.set(reason, [...(groups.get(reason) ?? []), b.name]);
+    }
+    return [...groups].map(([r, names]) => `${all && names.length === list.length ? 'všechny' : names.join(', ')}: ${r}`).join('; ');
+  };
+  if (ok === 0) return { ...base, state: 'error', detail: `Nefunguje žádný z ${sources.length} zdrojů – ${why(bad, true)}.`, hint: 'Podívej se na kontrolu Internet.' };
+  if (bad.length) return { ...base, state: 'warn', detail: `Funguje ${ok} z ${sources.length} zdrojů. Nejde ${bad.length}: ${why(bad, false)}.`, hint: 'Adresu zdroje lze opravit v server/news-sources.ts.' };
   return { ...base, state: 'ok', detail: `Všech ${sources.length} zdrojů funguje, staženo ${ago(lastPoll)}.` };
 }
 
@@ -92,9 +103,12 @@ async function checkWeather(): Promise<Check> {
   const base = { id: 'pocasi', name: 'Počasí' };
   try {
     const w = await getWeather();
+    const age = Date.now() - Date.parse(w.updated);
+    if (age > 30 * 60_000)
+      return { ...base, state: 'warn', detail: `Open-Meteo teď neodpovídá – ukazuji poslední známé počasí (${ago(w.updated)}).`, hint: 'Zkouším znovu za 1, 5 a 15 minut.' };
     return { ...base, state: 'ok', detail: `${w.place}: ${Math.round(w.current.temp)} °C, ${w.current.text.toLowerCase()}.` };
   } catch (err) {
-    return { ...base, state: 'warn', detail: `Počasí se nepodařilo načíst (${err instanceof Error ? err.message : 'chyba'}).` };
+    return { ...base, state: 'warn', detail: `Počasí se nepodařilo načíst (${netError(err)}).` };
   }
 }
 
@@ -163,15 +177,32 @@ async function checkVersion(): Promise<{ check: Check; alert?: Report['alerts'][
   };
 }
 
+async function checkNet(): Promise<Check> {
+  const n = await checkInternet(true);
+  const down = servicesHealth().filter((s) => !s.ok);
+  const list = down.map((s) => `${s.name} od ${new Date(s.since!).toLocaleTimeString('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' })} (${s.failures}×, další pokus ${s.nextRetry ? new Date(s.nextRetry).toLocaleTimeString('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' }) : '–'})`).join('; ');
+  if (n.state === 'online')
+    return down.length
+      ? { id: 'internet', name: 'Internet a služby', state: 'warn', detail: `Internet funguje, ale nejde: ${list}.`, hint: 'Výpadek je na straně služby – zkouším znovu za 1, 5 a 15 minut.' }
+      : { id: 'internet', name: 'Internet a služby', state: 'ok', detail: 'Internet funguje, všechny služby odpovídají.' };
+  return {
+    id: 'internet',
+    name: 'Internet a služby',
+    state: 'error',
+    detail: `${n.detail}${down.length ? ` Nefunguje: ${list}.` : ''}`,
+    hint: n.state === 'dns' ? 'Zkontroluj Wi-Fi/kabel a router. Služby zkouším znovu samy.' : 'Povol Node.js ve firewallu/antiviru (nebo ho dočasně vypni). Služby zkouším znovu samy.',
+  };
+}
+
 let last: Report | null = null;
 let running: Promise<Report> | null = null;
 
 export async function runChecks(): Promise<Report> {
   running ??= (async () => {
-    const [api, news, digests, weather, google, data, version] = await Promise.all([checkApi(), checkNews(), checkDigests(), checkWeather(), checkGoogle(), checkData(), checkVersion()]);
+    const [net, api, news, digests, weather, google, data, version] = await Promise.all([checkNet(), checkApi(), checkNews(), checkDigests(), checkWeather(), checkGoogle(), checkData(), checkVersion()]);
     last = {
       checkedAt: new Date().toISOString(),
-      checks: [api, google.check, news, digests, weather, data, version.check, checkServer()],
+      checks: [net, api, google.check, news, digests, weather, data, version.check, checkServer()],
       alerts: [google.alert, version.alert].filter((a): a is NonNullable<typeof a> => !!a),
     };
     return last;

@@ -111,6 +111,18 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Hlášení píše Claude Opus 5.5 (`JARVIS_MODEL`), jedno stojí asi korunu. Oslovení se dá
   změnit v `.env`: `JARVIS_OSLOVENI=pane`.
 
+## Výpadky a obnova
+
+- Každý dotaz ven má časový limit: RSS, Open-Meteo a Google 15–20 s, GitHub 8 s, Claude API
+  60 s na začátek odpovědi (dlouhé odpovědi neusekne) + 2 rychlá opakování.
+- Když služba selže (zprávy, počasí, plakátky, Claude API, GitHub, Google), zkusí ji městečko
+  samo znovu za **1, 5 a 15 minut** (pak každých 15 minut). Plakátek, který kvůli výpadku vyšel
+  jen z titulků, dostane AI souhrn dodatečně. Počasí mezitím ukazuje poslední známá data.
+- Bit (kontrola **Internet a služby**) rozliší výpadek internetu (DNS / firewall) od výpadku
+  jedné služby a ukáže, co od kdy nefunguje a kdy je další pokus. U chyb se ukládá skutečná
+  příčina (např. `ENOTFOUND` = DNS, `ETIMEDOUT` = vypršel čas, certifikát…), ne jen „fetch failed“.
+- **Log:** varování a chyby se zapisují do `data/log.txt` (při 1 MB se starý přesune do `log.old.txt`).
+
 ## Automatické aktualizace
 
 - Městečko se **aktualizuje samo z GitHubu** – už není potřeba stahovat ZIP.

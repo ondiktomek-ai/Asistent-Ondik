@@ -12,6 +12,7 @@ import { agenda, type CalEvent } from './calendar.ts';
 import { getReport } from './bit.ts';
 import { readJson } from './store.ts';
 import { recordUsage } from './usage.ts';
+import { claude } from './config.ts';
 import type { MemoryItem } from './team.ts';
 
 export const JARVIS_MODEL = process.env.JARVIS_MODEL || process.env.CLAUDE_MODEL || 'claude-opus-5-5';
@@ -88,7 +89,6 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
-let client: Anthropic | null = null;
 const recent = new Map<string, Briefing>();
 
 const prague = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleString('cs-CZ', { timeZone: 'Europe/Prague', ...opts });
@@ -170,8 +170,7 @@ ${mem || '(nic)'}
 
 Napiš hlášení.`;
 
-  client ??= new Anthropic();
-  const res = await client.beta.messages.create({
+  const res = await claude().beta.messages.create({
     model: JARVIS_MODEL,
     max_tokens: 6000,
     system: SYSTEM,

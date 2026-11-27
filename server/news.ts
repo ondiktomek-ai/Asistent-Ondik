@@ -1,3 +1,4 @@
+import { netError, serviceFailed, serviceOk } from './net.ts';
 import { createHash } from 'node:crypto';
 import { XMLParser } from 'fast-xml-parser';
 import { NEWS_SOURCES, type NewsScope, type NewsSource } from './news-sources.ts';
@@ -170,7 +171,7 @@ export async function pollNews(): Promise<NewsItem[]> {
         }
       } else {
         st.ok = false;
-        st.lastError = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        st.lastError = netError(r.reason);
       }
       d.sources[src.id] = st;
     });
@@ -184,6 +185,14 @@ export async function pollNews(): Promise<NewsItem[]> {
       .slice(0, MAX_ITEMS);
     d.lastPoll = now;
     await writeJson(FILE, d);
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed.length === results.length) {
+      const err = Object.assign(new Error(`nefunguje žádný z ${results.length} zdrojů zpráv`), { cause: failed[0].reason });
+      serviceFailed('zpravy', 'Zprávy (RSS)', err, () => pollNews());
+    } else {
+      serviceOk('zpravy', 'Zprávy (RSS)');
+      if (failed.length) console.warn(`[echo] nefunguje ${failed.length} z ${results.length} zdrojů: ${NEWS_SOURCES.filter((_, i) => results[i].status === 'rejected').map((s) => s.name).join(', ')}`);
+    }
     return firstRun ? [] : fresh;
   } finally {
     polling = false;

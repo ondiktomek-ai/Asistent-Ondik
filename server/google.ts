@@ -3,6 +3,7 @@
  * Vše běží jen u tebe na počítači: přihlašovací údaje aplikace i tokeny jsou v data/.
  * Bez dalších knihoven – jen fetch na oficiální adresy Googlu.
  */
+import { serviceFailed, serviceOk } from './net.ts';
 import { randomBytes } from 'node:crypto';
 import { chmod } from 'node:fs/promises';
 import path from 'node:path';
@@ -180,8 +181,15 @@ export async function googleApi(pathAndQuery: string, init: { method?: string; b
       body: init.body ? JSON.stringify(init.body) : undefined,
       signal: AbortSignal.timeout(20000),
     });
-  let res = await call(await accessToken());
-  if (res.status === 401) res = await call(await accessToken(true));
+  let res: Response;
+  try {
+    res = await call(await accessToken());
+    if (res.status === 401) res = await call(await accessToken(true));
+    serviceOk('google', 'Google Kalendář');
+  } catch (err) {
+    if (!(err instanceof NotConnectedError)) serviceFailed('google', 'Google Kalendář', err);
+    throw err;
+  }
   if (res.status === 204) return null;
   const j = (await res.json().catch(() => ({}))) as Record<string, any>;
   if (!res.ok) throw new Error(`Google Kalendář: ${j.error?.message ?? `HTTP ${res.status}`}`);

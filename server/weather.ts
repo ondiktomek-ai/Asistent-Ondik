@@ -1,3 +1,4 @@
+import { serviceFailed, serviceOk } from './net.ts';
 /** Počasí z Open-Meteo (zdarma, bez klíče). Výchozí místo: Lipník nad Bečvou. */
 
 export const PLACE = {
@@ -56,9 +57,18 @@ export async function getWeather(force = false): Promise<Weather> {
     forecast_days: '3',
     forecast_hours: '24',
   });
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`Open-Meteo: HTTP ${res.status}`);
-  const j = (await res.json()) as any;
+  let j: any;
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`Open-Meteo: HTTP ${res.status}`);
+    j = await res.json();
+    serviceOk('pocasi', 'Počasí (Open-Meteo)');
+  } catch (err) {
+    serviceFailed('pocasi', 'Počasí (Open-Meteo)', err, () => getWeather(true));
+    // poslední známé počasí je lepší než nic
+    if (cache && Date.now() - cache.at < 6 * 3600_000) return cache.data;
+    throw err;
+  }
   const cur = describe(j.current.weather_code, j.current.is_day === 1);
   const data: Weather = {
     place: PLACE.name,

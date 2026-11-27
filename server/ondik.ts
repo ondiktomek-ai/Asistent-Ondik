@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AGENTS } from '../src/world/agents.ts';
 import { loadConversation, saveConversation, type ChatAttachment, type DisplayMessage } from './store.ts';
 import { LEXA_MODEL, LEXA_SYSTEM, LEXA_TOOLS, LEXA_TOOL_LABELS, lexaContext, runLexaTool } from './lexa.ts';
-import { apiKeyConfigured, nowText } from './config.ts';
+import { apiKeyConfigured, claude, nowText } from './config.ts';
+import { serviceFailed, serviceOk } from './net.ts';
 import { ECHO_MODEL, ECHO_SYSTEM, echoContext } from './echo-chat.ts';
 import { recordUsage } from './usage.ts';
 import { KLIK_MODEL, KLIK_SYSTEM, KLIK_TOOL_LABELS, OPEN_LINK, OPEN_LINK_TOOL, klikContext, runOpenLink, tilesText } from './klik.ts';
@@ -15,10 +16,16 @@ export { apiKeyConfigured };
 
 export const MODEL = process.env.CLAUDE_MODEL ?? 'claude-opus-5-5';
 
-let client: Anthropic | null = null;
-function getClient() {
-  client ??= new Anthropic();
-  return client;
+const getClient = claude;
+
+/** Bezplatné ověření, že Claude API zase odpovídá (pro opakování po výpadku). */
+export async function pingClaude() {
+  try {
+    await claude().models.list({ limit: 1 }, { timeout: 15_000 });
+    serviceOk('claude', 'Claude API');
+  } catch (err) {
+    serviceFailed('claude', 'Claude API', err, pingClaude);
+  }
 }
 
 
@@ -218,7 +225,14 @@ async function runAgent(agentId: string, messages: Anthropic.Beta.BetaMessagePar
         o.onTool?.(labels[ev.content_block.name] ?? '🔎 Hledám…');
       }
     });
-    const final = await stream.finalMessage();
+    let final: Anthropic.Beta.BetaMessage;
+    try {
+      final = await stream.finalMessage();
+    } catch (err) {
+      if (err instanceof Anthropic.APIConnectionError && !o.signal.aborted) serviceFailed('claude', 'Claude API', err, pingClaude);
+      throw err;
+    }
+    serviceOk('claude', 'Claude API');
     recordUsage(agentId, final.model || cfg.model, final.usage);
 
     if (final.stop_reason === 'refusal') throw new Error(`Tuhle žádost ${cfg.name} nemůže zpracovat.`);
