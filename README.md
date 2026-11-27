@@ -118,6 +118,15 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
 - Když služba selže (zprávy, počasí, plakátky, Claude API, GitHub, Google), zkusí ji městečko
   samo znovu za **1, 5 a 15 minut** (pak každých 15 minut). Plakátek, který kvůli výpadku vyšel
   jen z titulků, dostane AI souhrn dodatečně. Počasí mezitím ukazuje poslední známá data.
+- **Když nepomůže ani 3. opakování** a internet přitom funguje, městečko službu „restartuje“
+  (zahodí stará spojení, Claude API dostane nového klienta) a zkusí ji za minutu. Když nepomůže
+  ani to, restartuje se celý server – spouštěč ho za 3 s spustí znovu a okno městečka se samo
+  připojí. Pojistky: restart serveru nejdřív 10 min po spuštění, nejvýš 1× za hodinu a 3× za den
+  (záznam v `data/restarty.json`), jen při chybách spojení (ne při neplatném klíči, kreditu nebo
+  chybě 500 na straně služby) a jen když server běží přes ikonu (`scripts/server-smycka.cmd`).
+- **Bez internetu se nerestartuje nic** – městečko jen čeká a zkouší dál.
+- **Po probuzení počítače ze spánku** (Wi-Fi se ve spánku vypíná) zahodí stará spojení a nefunkční
+  služby zkusí hned, ne až za 15 minut.
 - Bit (kontrola **Internet a služby**) rozliší výpadek internetu (DNS / firewall) od výpadku
   jedné služby a ukáže, co od kdy nefunguje a kdy je další pokus. U chyb se ukládá skutečná
   příčina (např. `ENOTFOUND` = DNS, `ETIMEDOUT` = vypršel čas, certifikát…), ne jen „fetch failed“.

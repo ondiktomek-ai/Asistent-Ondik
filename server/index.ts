@@ -1,8 +1,13 @@
 import './env.ts';
-import { installFileLog } from './net.ts';
+import { installFileLog, onBeforeRestart, onServiceReset, restartSupported, watchSleep } from './net.ts';
+import { resetClaude } from './config.ts';
 
 // varování a chyby jdou i do data/log.txt
 installFileLog();
+// restart služeb po výpadku: Claude API dostane nového klienta (nová spojení dostanou všechny služby samy)
+onServiceReset('claude', resetClaude);
+onServiceReset('plakatky', resetClaude);
+watchSleep();
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
@@ -455,10 +460,19 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// před restartem serveru (obnova po výpadku) uvolníme port, ať ho nový server hned dostane
+onBeforeRestart(
+  () =>
+    new Promise<void>((resolve) => {
+      server.close(() => resolve());
+      server.closeAllConnections();
+    }),
+);
+
 server.listen(PORT, HOST, () => {
   if (process.env.ZPRAVY !== 'vypnuto') startReporter();
   startMaintenance();
-  console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}${restartSupported() ? ' (spouštěč ho po pádu služeb sám restartuje)' : ''}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
   if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');
   else {

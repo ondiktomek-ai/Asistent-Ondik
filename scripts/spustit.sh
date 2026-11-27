@@ -17,7 +17,8 @@ if ! bezi; then
     exit 1
   fi
   mkdir -p data
-  nohup npm run serve >data/server.log 2>&1 &
+  # smyčka: kód 75 = server žádá o restart (obnova po výpadku služeb) → spustí se znovu
+  MESTECKO_SMYCKA=1 nohup bash -c 'while :; do npm run serve; [ $? -eq 75 ] || break; sleep 3; done' >data/server.log 2>&1 &
   for _ in $(seq 1 60); do
     sleep 0.5
     bezi && break

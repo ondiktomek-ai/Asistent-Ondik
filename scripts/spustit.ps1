@@ -94,7 +94,8 @@ if (-not (Bezi)) {
   $kroky = @()
   if ($potrebaKnihoven) { $kroky += "echo Aktualizuji knihovny... && npm install --no-fund --no-audit && (echo $otiskKnihoven)>node_modules\.otisk-knihoven" }
   if ($potrebaSestavit) { $kroky += "echo Sestavuji novou verzi mestecka... && npm run build && (echo $otisk)>dist\.otisk" }
-  $kroky += 'npm run serve'
+  # smyčka: když server požádá o restart (obnova po výpadku služeb), spustí se znovu
+  $kroky += 'call scripts\server-smycka.cmd'
   $prikaz = 'title Mestecko Ondik - server (zavrenim tohoto okna mestecko vypnes) & ' + ($kroky -join ' && ') + ' & pause'
   # při aktualizaci okno ukážeme, ať je vidět, že se něco děje
   $styl = if ($potrebaSestavit) { 'Normal' } else { 'Minimized' }
