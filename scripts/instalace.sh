@@ -1,5 +1,5 @@
 #!/bin/bash
-# Instalace Městečka Ondik na Macu (a Linuxu).
+# Instalace OndiVerse na Macu (a Linuxu).
 # Spouští se dvojklikem na „Nainstalovat-Mac.command“. Dá se pustit opakovaně – .env nepřepíše.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
@@ -10,7 +10,7 @@ konec() { printf '\n  \033[31mCHYBA\033[0m  %s\n' "$1"; read -r -p "Stiskni Ente
 verze_node() { node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || echo 0; }
 
 echo "=============================================="
-echo "   Městečko Ondik – instalace"
+echo "   OndiVerse – instalace"
 echo "=============================================="
 echo "Složka: $ROOT"
 
@@ -44,7 +44,7 @@ if [ ! -f .env ]; then
   read -r -p "  Heslo (Enter = bez hesla, jen tento počítač): " HESLO
   umask 077
   cat >.env <<ENV
-# Nastavení Městečka Ondik (vytvořila instalace). Klíč nikomu neposílej.
+# Nastavení OndiVerse (vytvořila instalace). Klíč nikomu neposílej.
 ANTHROPIC_API_KEY=$KLIC
 OFFICE_PASSWORD=$HESLO
 PORT=8787
@@ -65,25 +65,25 @@ ok "Hotovo"
 zluta "Vytvářím zástupce na ploše"
 chmod +x scripts/*.sh
 if [ "$(uname)" = "Darwin" ]; then
-  CIL="$HOME/Desktop/Městečko Ondik.app"
+  CIL="$HOME/Desktop/OndiVerse.app"
   rm -rf "$CIL"
   if osacompile -o "$CIL" -e "do shell script quoted form of \"$ROOT/scripts/spustit.sh\" & \" >/dev/null 2>&1 &\"" 2>/dev/null; then
     # vlastní ikona robota
     osascript -l JavaScript -e "ObjC.import('AppKit'); \$.NSWorkspace.sharedWorkspace.setIconForFileOptions(\$.NSImage.alloc.initWithContentsOfFile('$ROOT/public/icon-512.png'), '$CIL', 0)" >/dev/null 2>&1
   else
-    CIL="$HOME/Desktop/Městečko Ondik.command"
+    CIL="$HOME/Desktop/OndiVerse.command"
     printf '#!/bin/bash\n"%s/scripts/spustit.sh"\n' "$ROOT" >"$CIL"
     chmod +x "$CIL"
   fi
 else
   PLOCHA="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
   mkdir -p "$PLOCHA"
-  CIL="$PLOCHA/mestecko-ondik.desktop"
+  CIL="$PLOCHA/ondiverse.desktop"
   cat >"$CIL" <<DESK
 [Desktop Entry]
 Type=Application
-Name=Městečko Ondik
-Comment=Spustí Městečko Ondik
+Name=OndiVerse
+Comment=Spustí OndiVerse
 Exec="$ROOT/scripts/spustit.sh"
 Icon=$ROOT/public/icon-512.png
 Terminal=false

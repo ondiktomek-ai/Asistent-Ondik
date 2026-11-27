@@ -51,7 +51,7 @@ export async function latestVersion(force = false): Promise<string | null> {
 
 async function viaGit(): Promise<string | null> {
   const res = await fetch(`https://github.com/${REPO}.git/info/refs?service=git-upload-pack`, {
-    headers: { 'User-Agent': 'git/2.45.0 (MesteckoOndik)' },
+    headers: { 'User-Agent': 'git/2.45.0 (OndiVerse)' },
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) return null;
@@ -62,7 +62,7 @@ async function viaGit(): Promise<string | null> {
 
 async function viaApi(): Promise<string | null> {
   const res = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(BRANCH)}`, {
-    headers: { 'User-Agent': 'MesteckoOndik', Accept: 'application/vnd.github+json' },
+    headers: { 'User-Agent': 'OndiVerse', Accept: 'application/vnd.github+json' },
     signal: AbortSignal.timeout(8000),
   });
   return res.ok ? (((await res.json()) as { sha?: string }).sha ?? null) : null;

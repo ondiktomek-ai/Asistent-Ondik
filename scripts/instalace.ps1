@@ -1,4 +1,4 @@
-﻿# Instalace Městečka Ondik na Windows.
+﻿# Instalace OndiVerse na Windows.
 # Spouští se dvojklikem na „Nainstalovat-Windows.bat“ v kořeni projektu.
 # Dá se pustit opakovaně (např. po stažení nové verze) – existující nastavení (.env) nepřepíše.
 
@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 . (Join-Path $PSScriptRoot 'spolecne.ps1')
-$Host.UI.RawUI.WindowTitle = 'Městečko Ondik – instalace'
+$Host.UI.RawUI.WindowTitle = 'OndiVerse – instalace'
 
 function Krok($text) { Write-Host ''; Write-Host "> $text" -ForegroundColor Yellow }
 function Ok($text) { Write-Host "  OK  $text" -ForegroundColor Green }
@@ -24,7 +24,7 @@ function VerzeNode {
 }
 
 Write-Host '==============================================' -ForegroundColor Cyan
-Write-Host '   Městečko Ondik – instalace' -ForegroundColor Cyan
+Write-Host '   OndiVerse – instalace' -ForegroundColor Cyan
 Write-Host '==============================================' -ForegroundColor Cyan
 Write-Host "Složka: $Root"
 
@@ -67,7 +67,7 @@ if (-not (Test-Path $envFile)) {
   Write-Host '  Heslo do městečka je potřeba jen pro přístup z telefonu.'
   $heslo = Read-Host '  Heslo (Enter = bez hesla, městečko poběží jen na tomhle počítači)'
   $radky = @(
-    '# Nastavení Městečka Ondik (vytvořila instalace). Klíč nikomu neposílej.',
+    '# Nastavení OndiVerse (vytvořila instalace). Klíč nikomu neposílej.',
     "ANTHROPIC_API_KEY=$klic",
     "OFFICE_PASSWORD=$heslo",
     'PORT=8787'
@@ -120,14 +120,17 @@ Ok 'Hotovo'
 # 6) Zástupce na ploše -------------------------------------------------------
 Krok 'Vytvářím zástupce na ploše'
 $plocha = [Environment]::GetFolderPath('Desktop')
-$lnk = Join-Path $plocha 'Městečko Ondik.lnk'
+$lnk = Join-Path $plocha 'OndiVerse.lnk'
+# ikona se starým názvem (dřív „Městečko Ondik“) by jinak zůstala na ploše
+$stara = Join-Path $plocha "M$([char]0x011B)ste$([char]0x010D)ko Ondik.lnk"
+if (Test-Path $stara) { Remove-Item $stara -Force -ErrorAction SilentlyContinue }
 $ws = New-Object -ComObject WScript.Shell
 $sc = $ws.CreateShortcut($lnk)
 $sc.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Root\scripts\spustit.ps1`""
 $sc.WorkingDirectory = $Root
 $sc.IconLocation = "$Root\scripts\ikona.ico,0"
-$sc.Description = 'Spustí Městečko Ondik'
+$sc.Description = 'Spustí OndiVerse'
 $sc.WindowStyle = 7
 $sc.Save()
 Ok "Zástupce: $lnk"

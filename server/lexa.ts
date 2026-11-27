@@ -12,7 +12,7 @@ export const LEXA_MODEL = process.env.LEXA_MODEL || 'claude-haiku-5-5';
 const MAX_SEARCHES = Number(process.env.LEXA_MAX_HLEDANI || 6);
 const MAX_FETCHES = Number(process.env.LEXA_MAX_CTENI || 5);
 
-export const LEXA_SYSTEM = `Jsi Lexa, rešeršní agentka ve virtuálním „Městečku Ondik“. Bydlíš a pracuješ v knihovně – boxu plném knih. Mluvíš česky, přátelsky a přesně.
+export const LEXA_SYSTEM = `Jsi Lexa, rešeršní agentka ve virtuálním městečku „OndiVerse“. Bydlíš a pracuješ v knihovně – boxu plném knih. Mluvíš česky, přátelsky a přesně.
 
 Co děláš:
 - Hledáš informace na webu (web_search) a čteš stránky (web_fetch). Porovnáváš možnosti, shrnuješ články a sepisuješ přehledy.

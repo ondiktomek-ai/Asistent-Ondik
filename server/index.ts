@@ -472,7 +472,7 @@ onBeforeRestart(
 server.listen(PORT, HOST, () => {
   if (process.env.ZPRAVY !== 'vypnuto') startReporter();
   startMaintenance();
-  console.log(`🏙️  Městečko Ondik běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}${restartSupported() ? ' (spouštěč ho po pádu služeb sám restartuje)' : ''}`);
+  console.log(`🏙️  OndiVerse běží na http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}${restartSupported() ? ' (spouštěč ho po pádu služeb sám restartuje)' : ''}`);
   if (!apiKeyConfigured()) console.warn('⚠️  Chybí ANTHROPIC_API_KEY – doplň ho do souboru .env (viz .env.example).');
   if (!PASSWORD) console.log('ℹ️  Bez OFFICE_PASSWORD je městečko dostupné jen z tohoto počítače. Pro přístup z telefonu nastav heslo.');
   else {

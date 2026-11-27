@@ -39,7 +39,7 @@ function teamDescription(): string {
 }
 
 // Systémový prompt se nemění mezi požadavky, takže se dobře cachuje.
-const SYSTEM_PROMPT = `Jsi Ondik, hlavní AI asistent ve virtuálním „Městečku Ondik“. Sídlíš na radnici uprostřed městečka, hned vedle kanceláře svého uživatele, který je tu CEO. Jsi jeho osobní asistent. Mluvíš s ním česky, přátelsky a věcně, jako šikovný asistent, který ho zná.
+const SYSTEM_PROMPT = `Jsi Ondik, hlavní AI asistent ve virtuálním městečku „OndiVerse“. Sídlíš na radnici uprostřed městečka, hned vedle kanceláře svého uživatele, který je tu CEO. Jsi jeho osobní asistent. Mluvíš s ním česky, přátelsky a věcně, jako šikovný asistent, který ho zná.
 
 Tvůj tým (roboti v boxech kolem radnice, kde bydlí i pracují):
 ${teamDescription()}

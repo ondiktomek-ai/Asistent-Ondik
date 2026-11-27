@@ -1,4 +1,4 @@
-﻿# Společné funkce pro instalaci a spouštění Městečka Ondik (Windows).
+﻿# Společné funkce pro instalaci a spouštění OndiVerse (Windows).
 
 # Otisk zdrojových souborů – změní se, kdykoli rozbalíš novou verzi (jiné velikosti/časy souborů).
 function Otisk-Zdroju([string]$Root) {
@@ -42,18 +42,35 @@ function Aktualizuj([string]$Root, [hashtable]$Nastaveni) {
   $repo = 'ondiktomek-ai/Asistent-Ondik'
   $vetev = if ($Nastaveni['AKTUALIZACE_VETEV']) { $Nastaveni['AKTUALIZACE_VETEV'] } else { 'claude/ai-agent-office-setup-2nah22' }
   $souborVerze = Join-Path $Root '.verze'
+
+  # Složka propojená s Gitem: aktualizace přes git pull – a jen když v ní nejsou neuložené úpravy
+  # (ZIP by je přepsal). Bez gitu se v takové složce neaktualizuje nic.
+  if (Test-Path (Join-Path $Root '.git')) {
+    $git = @("$env:ProgramFiles\Git\cmd\git.exe", (Get-Command git -ErrorAction SilentlyContinue).Source) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $git) { return $false }
+    if (& $git -C $Root status --porcelain --untracked-files=no) { return $false }
+    $pred = (& $git -C $Root rev-parse HEAD) -join ''
+    # (bez přesměrování 2> – ve Windows PowerShellu 5.1 by z hlášek gitu udělalo chybu)
+    & $git -C $Root fetch --quiet origin $vetev
+    if ($LASTEXITCODE -ne 0) { return $false }   # bez internetu → spustí se stávající verze
+    & $git -C $Root merge --quiet --ff-only FETCH_HEAD | Out-Null
+    $po = (& $git -C $Root rev-parse HEAD) -join ''
+    Zapis-Otisk $souborVerze $po
+    return ($po -ne $pred)
+  }
+
   [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
   $sha = $null
   # nejdřív přes git rozhraní (nepočítá se do limitu API), záloha přes API GitHubu
   try {
-    $refs = Invoke-WebRequest -Uri "https://github.com/$repo.git/info/refs?service=git-upload-pack" -Headers @{ 'User-Agent' = 'git/2.45.0 (MesteckoOndik)' } -UseBasicParsing -TimeoutSec 10
+    $refs = Invoke-WebRequest -Uri "https://github.com/$repo.git/info/refs?service=git-upload-pack" -Headers @{ 'User-Agent' = 'git/2.45.0 (OndiVerse)' } -UseBasicParsing -TimeoutSec 10
     $obsah = if ($refs.Content -is [byte[]]) { [Text.Encoding]::ASCII.GetString($refs.Content) } else { [string]$refs.Content }
     $m = [regex]::Match($obsah, '([0-9a-f]{40}) refs/heads/' + [regex]::Escape($vetev) + '(\s|\x00|$)')
     if ($m.Success) { $sha = $m.Groups[1].Value }
   } catch { }
   if (-not $sha) {
     try {
-      $info = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/commits/$([uri]::EscapeDataString($vetev))" -Headers @{ 'User-Agent' = 'MesteckoOndik'; 'Accept' = 'application/vnd.github+json' } -TimeoutSec 10
+      $info = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/commits/$([uri]::EscapeDataString($vetev))" -Headers @{ 'User-Agent' = 'OndiVerse'; 'Accept' = 'application/vnd.github+json' } -TimeoutSec 10
       $sha = [string]$info.sha
     } catch { }
   }

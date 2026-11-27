@@ -1,4 +1,4 @@
-﻿# Spuštění Městečka Ondik na Windows – volá ho zástupce na ploše.
+﻿# Spuštění OndiVerse na Windows – volá ho zástupce na ploše.
 # 1) Pozná novou verzi (rozbalený ZIP): doinstaluje knihovny, sestaví ji a restartuje starý server.
 # 2) Pokud server neběží, spustí ho v minimalizovaném okně (zavřením toho okna městečko vypneš).
 # 3) Otevře městečko jako samostatné okno (Chrome/Edge v režimu aplikace) na zvoleném monitoru.
@@ -15,7 +15,7 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [En
 
 function Zprava($text) {
   Add-Type -AssemblyName PresentationFramework
-  [void][System.Windows.MessageBox]::Show($text, 'Městečko Ondik')
+  [void][System.Windows.MessageBox]::Show($text, 'OndiVerse')
 }
 
 # Nastavení z .env
@@ -62,7 +62,7 @@ function Zastav-Server {
   $p = $proces
   for ($k = 0; $k -lt 6 -and $p -and $p.ParentProcessId; $k++) {
     $p = Get-CimInstance Win32_Process -Filter "ProcessId=$($p.ParentProcessId)"
-    if ($p -and $p.Name -eq 'cmd.exe' -and $p.CommandLine -like '*Mestecko Ondik - server*') { $cil = $p; break }
+    if ($p -and $p.Name -eq 'cmd.exe' -and ($p.CommandLine -like '*OndiVerse - server*' -or $p.CommandLine -like '*Mestecko Ondik - server*')) { $cil = $p; break }
   }
   & taskkill.exe /PID $cil.ProcessId /T /F | Out-Null
   for ($i = 0; $i -lt 20 -and (Bezi); $i++) { Start-Sleep -Milliseconds 500 }
@@ -96,7 +96,7 @@ if (-not (Bezi)) {
   if ($potrebaSestavit) { $kroky += "echo Sestavuji novou verzi mestecka... && npm run build && (echo $otisk)>dist\.otisk" }
   # smyčka: když server požádá o restart (obnova po výpadku služeb), spustí se znovu
   $kroky += 'call scripts\server-smycka.cmd'
-  $prikaz = 'title Mestecko Ondik - server (zavrenim tohoto okna mestecko vypnes) & ' + ($kroky -join ' && ') + ' & pause'
+  $prikaz = 'title OndiVerse - server (zavrenim tohoto okna mestecko vypnes) & ' + ($kroky -join ' && ') + ' & pause'
   # při aktualizaci okno ukážeme, ať je vidět, že se něco děje
   $styl = if ($potrebaSestavit) { 'Normal' } else { 'Minimized' }
   $server = Start-Process -FilePath 'cmd.exe' -WorkingDirectory $Root -WindowStyle $styl -PassThru -ArgumentList '/c', $prikaz

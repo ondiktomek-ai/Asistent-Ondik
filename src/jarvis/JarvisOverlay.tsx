@@ -466,7 +466,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
     if (w) out.push({ tag: 'POČASÍ', text: `Lipník ${Math.round(w.temp)} °C, ${w.text.toLowerCase()}` });
     for (const sg of briefing.segments) for (const n of sg.items) out.push({ tag: KIND_LABEL[sg.kind].toUpperCase(), text: n.title });
     for (const e of briefing.events.slice(0, 3)) out.push({ tag: 'PROGRAM', text: `${e.allDay ? 'celý den' : e.start.slice(11, 16)} ${e.summary}` });
-    return out.length ? out : [{ tag: 'JARVIS', text: 'Městečko Ondik' }];
+    return out.length ? out : [{ tag: 'JARVIS', text: 'OndiVerse' }];
   }, [briefing]);
   const czech = czechVoices(voices);
   const noCzechVoice = ttsSupported() && voices.length > 0 && !czech.length;
@@ -499,7 +499,7 @@ export function JarvisOverlay({ serverOnline, onClose, onPhase, onOpenResearch, 
         <div className="jarvis-brand">
           <span className="jarvis-brand-dot" />
           J.A.R.V.I.S.
-          <small>Městečko Ondik</small>
+          <small>OndiVerse</small>
         </div>
         {segments.length > 0 && (
           <nav className="jarvis-steps" aria-label="Části hlášení">

@@ -8,7 +8,7 @@ export const CHRONOS_MODEL = process.env.CHRONOS_MODEL || 'claude-sonnet-5-5';
 
 const WORK_TEXT = process.env.PRACOVNI_DOBA || '08:00-20:00';
 
-export const CHRONOS_SYSTEM = `Jsi Chronos, kalendářní agent ve virtuálním „Městečku Ondik“. Staráš se o Google Kalendář svého uživatele (jeho hlavní kalendář). Mluvíš česky, stručně a věcně.
+export const CHRONOS_SYSTEM = `Jsi Chronos, kalendářní agent ve virtuálním městečku „OndiVerse“. Staráš se o Google Kalendář svého uživatele (jeho hlavní kalendář). Mluvíš česky, stručně a věcně.
 
 Jak pracuješ:
 - Kalendář čti a měň VÝHRADNĚ přes nástroje. Nikdy si nevymýšlej události ani volné termíny – vždy se podívej.

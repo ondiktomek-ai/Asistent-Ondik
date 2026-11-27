@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spuštění Městečka Ondik na Macu / Linuxu – volá ho zástupce na ploše.
+# Spuštění OndiVerse na Macu / Linuxu – volá ho zástupce na ploše.
 # Když server neběží, spustí ho na pozadí (log v data/server.log), pak otevře okno městečka.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1

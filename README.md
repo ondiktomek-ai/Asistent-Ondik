@@ -1,4 +1,4 @@
-# 🏙️ Městečko Ondik
+# 🏙️ OndiVerse
 
 Osobní AI asistent jako 3D městečko robotů-agentů. Každý agent má vlastní **box**, ve kterém
 bydlí (postel, noční stolek) i pracuje (pracoviště podle zaměření). Boxy stojí v kruhu kolem
@@ -20,17 +20,17 @@ nebo radnici se kamera přiblíží a otevře detail. V noci jdou roboti k poste
    - stáhne knihovny a sestaví městečko,
    - zeptá se na **Claude API klíč** a heslo (heslo jen pro přístup z telefonu),
    - když máš víc monitorů, zeptá se, **na kterém** má městečko běžet a jestli přes celou obrazovku,
-   - vytvoří na ploše ikonu **Městečko Ondik**.
+   - vytvoří na ploše ikonu **OndiVerse**.
 3. Hotovo – od teď stačí **dvojklik na ikonu na ploše**.
 
-Ikona spustí server (minimalizované okno *Mestecko Ondik – server* na liště – jeho zavřením
+Ikona spustí server (minimalizované okno *OndiVerse – server* na liště – jeho zavřením
 městečko vypneš) a otevře městečko jako samostatné okno bez lišty prohlížeče (Chrome nebo Edge).
 Pokud se instalace zeptá na „neznámého vydavatele“, zvol *Další informace → Přesto spustit*.
 
 ### Mac
 1. Stáhni ZIP z GitHubu a rozbal ho (třeba do *Dokumentů*).
 2. Na **`Nainstalovat-Mac.command`** klikni **pravým tlačítkem → Otevřít** (poprvé to macOS jinak nedovolí).
-3. Na ploše se objeví aplikace **Městečko Ondik**. Server poběží na pozadí do vypnutí počítače;
+3. Na ploše se objeví aplikace **OndiVerse**. Server poběží na pozadí do vypnutí počítače;
    ručně ho vypneš příkazem `scripts/zastavit.sh`.
 
 ### Druhý monitor a celá obrazovka
@@ -143,6 +143,8 @@ v `src/world3d/town.ts`. Pro ladění: `?ladeni&rychlost=5` v adrese zrychlí č
   a stránka se obnoví.
 - Bez internetu se prostě spustí stávající verze. Vypnutí: v `.env` řádek `AKTUALIZACE=ne`.
 - Nainstalovanou verzi si spouštěč pamatuje v souboru `.verze`.
+- Když je složka propojená s Gitem (je v ní `.git`), aktualizuje se přes `git pull` – a jen když
+  v ní nejsou neuložené úpravy, aby rozdělaná práce nezmizela.
 
 ## Autopilot – městečko jede samo
 
@@ -238,7 +240,7 @@ Přesná čísla a vyúčtování jsou v **Claude Console → Usage / Cost**.
    vytvoříš si u Googlu vlastní „přihlašovací aplikaci“ (projekt v Google Cloud, zapnuté Calendar API,
    klient typu *Aplikace pro počítač*) a vložíš její **Client ID** a **Client secret**.
 2. **Přihlas se přes Google** – dělej to na počítači, kde městečko běží (ne z telefonu).
-   Varování „Google tuto aplikaci neověřil“ je v pořádku: *Pokročilé → Přejít na Městečko Ondik*.
+   Varování „Google tuto aplikaci neověřil“ je v pořádku: *Pokročilé → Přejít na OndiVerse*.
 3. Hotovo. Chronosovi pak piš třeba „Co mám zítra?“, „Najdi mi příští týden hodinu na zubaře“
    nebo „Zapiš oběd s Petrem ve čtvrtek ve 12“. Změny v kalendáři dělá **rovnou** a napíše, co udělal.
 

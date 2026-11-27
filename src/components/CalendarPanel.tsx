@@ -80,7 +80,7 @@ function Setup({ onSaved }: { onSaved: () => void }) {
           <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noreferrer">
             Google Cloud – nový projekt
           </a>
-          , pojmenuj ho třeba <b>Mestecko Ondik</b> a dej <i>Vytvořit</i>.
+          , pojmenuj ho třeba <b>OndiVerse</b> a dej <i>Vytvořit</i>.
         </li>
         <li>
           Zapni{' '}
@@ -94,7 +94,7 @@ function Setup({ onSaved }: { onSaved: () => void }) {
           <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noreferrer">
             Google Auth Platform
           </a>{' '}
-          → <i>Začínáme</i>: název aplikace <b>Městečko Ondik</b>, tvůj e-mail, typ uživatelů <b>Externí</b>, kontaktní e-mail, souhlas → <i>Vytvořit</i>.
+          → <i>Začínáme</i>: název aplikace <b>OndiVerse</b>, tvůj e-mail, typ uživatelů <b>Externí</b>, kontaktní e-mail, souhlas → <i>Vytvořit</i>.
         </li>
         <li>
           V části <i>Okruh uživatelů (Audience)</i> klikni na <b>Publikovat aplikaci</b> → potvrdit. (Jinak by tě Google každých 7 dní odhlásil. Ověřovat
@@ -142,7 +142,7 @@ export function CalendarPanel({ serverOnline, notice, onStatusChange }: Calendar
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 404
-          ? 'Běží ještě starší verze serveru. Zavři okno „Mestecko Ondik - server“ na liště a spusť městečko znovu ikonou na ploše.'
+          ? 'Běží ještě starší verze serveru. Zavři okno „OndiVerse - server“ na liště a spusť městečko znovu ikonou na ploše.'
           : err instanceof Error
             ? err.message
             : 'Nepodařilo se načíst kalendář.',
@@ -206,7 +206,7 @@ export function CalendarPanel({ serverOnline, notice, onStatusChange }: Calendar
           )}
           <p className="hint">
             Google ukáže varování „Google tuto aplikaci neověřil“ – to je v pořádku, je to tvoje vlastní aplikace. Klikni na <b>Pokročilé</b> →{' '}
-            <b>Přejít na Městečko Ondik</b> a povol přístup ke kalendáři.
+            <b>Přejít na OndiVerse</b> a povol přístup ke kalendáři.
           </p>
         </div>
       ) : (

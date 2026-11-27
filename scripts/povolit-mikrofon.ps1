@@ -1,4 +1,4 @@
-﻿# Povolení mikrofonu pro okno Městečka Ondik (když ho omylem zakážeš).
+﻿# Povolení mikrofonu pro okno OndiVerse (když ho omylem zakážeš).
 # Okno městečka má vlastní profil prohlížeče – tento skript ho zavře, smaže uložená oprávnění
 # (a s nimi i zapamatovanou polohu okna) a městečko znovu otevře. Pak stačí u Jarvise dát „Povolit“.
 

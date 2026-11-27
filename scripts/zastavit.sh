@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vypne server Městečka Ondik (Mac / Linux).
+# Vypne server OndiVerse (Mac / Linux).
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="$(grep -E '^[[:space:]]*PORT[[:space:]]*=' "$ROOT/.env" 2>/dev/null | tail -n1 | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')"
 PORT="${PORT:-8787}"

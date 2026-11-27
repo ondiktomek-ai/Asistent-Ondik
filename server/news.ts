@@ -126,7 +126,7 @@ export function parseFeed(xml: string, source: NewsSource, now = new Date()): Ne
 
 async function fetchSource(src: NewsSource): Promise<NewsItem[]> {
   const res = await fetch(src.url, {
-    headers: { 'User-Agent': 'MesteckoOndik/1.0 (osobni RSS ctecka)', Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
+    headers: { 'User-Agent': 'OndiVerse/1.0 (osobni RSS ctecka)', Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
     signal: AbortSignal.timeout(15000),
     redirect: 'follow',
   });

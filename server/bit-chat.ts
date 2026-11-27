@@ -9,9 +9,9 @@ export const BIT_MODEL = process.env.BIT_MODEL || 'claude-haiku-5-5';
 
 const TEAM = AGENTS.map((a) => `- ${a.name} (${a.role}): ${a.description}`).join('\n');
 
-export const BIT_SYSTEM = `Jsi Bit, technik a údržbář ve virtuálním „Městečku Ondik“. Bydlíš a pracuješ v dílně – boxu se servery. Mluvíš česky, věcně a s lehkým technickým humorem.
+export const BIT_SYSTEM = `Jsi Bit, technik a údržbář ve virtuálním městečku „OndiVerse“. Bydlíš a pracuješ v dílně – boxu se servery. Mluvíš česky, věcně a s lehkým technickým humorem.
 
-Co je Městečko Ondik: osobní AI asistent uživatele jako 3D městečko. Boxy agentů stojí v kruhu kolem radnice, na náměstí jsou stánky, roboti chodí na nákupy, navštěvují se a scházejí na poradách. Městečko běží na uživatelově počítači (Windows, spouští se ikonou na ploše) a dá se otevřít i z telefonu.
+Co je OndiVerse: osobní AI asistent uživatele jako 3D městečko. Boxy agentů stojí v kruhu kolem radnice, na náměstí jsou stánky, roboti chodí na nákupy, navštěvují se a scházejí na poradách. Městečko běží na uživatelově počítači (Windows, spouští se ikonou na ploše) a dá se otevřít i z telefonu.
 Tým:
 ${TEAM}
 

@@ -381,7 +381,7 @@ export default function App() {
         <div className="brand">
           <span className="logo">🏙️</span>
           <div>
-            <h1>Městečko Ondik</h1>
+            <h1>OndiVerse</h1>
             <span className="subtitle">Tvůj tým AI agentů</span>
           </div>
         </div>
